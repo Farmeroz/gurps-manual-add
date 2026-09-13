@@ -2,7 +2,7 @@
 
 Open the GURPS 4e Game Aid (GGA) Apply Damage Dialog without rolling damage first.  The module uses GGA's actual calculator and damage-application code.  DR, hit locations, damage types, wounding modifiers, and the other actor data and options that GGA normally uses remain available.
 
-Target: Foundry VTT 14 and GGA 0.18.x.  Integration inspected against GGA 0.18.23.  The user has confirmed that v0.1.0 works via /add and for multiple recipients in a live world.  Version 0.1.1 fixes HUD integration; its new HUD controls have passed DOM and hook regression checks but still need confirmation in that live world.  There are no additional module dependencies.
+Target: Foundry VTT 14 and GGA 0.18.x.  Tested in live Foundry worlds with GGA 0.18.23, including `/add`, multiple recipients, and the Version 0.1.1 HUD controls.  There are no additional module dependencies.
 
 ## Update from 0.1.0
 
@@ -121,7 +121,7 @@ await game.modules.get('gurps-manual-add').api.command('/add 12 cut');
 
 The promise resolves `true` when the queue finishes, including skipped recipients, or `false` if cancelled, rejected, or unable to open.  It is not a count of actors damaged.  Awaited OtF/chat command processing waits for the queue to finish.
 
-## First live check
+## Functional check
 
 Use a disposable unlinked NPC token with **30 current HP, DR 4 at Torso**, and no relevant injury modifiers.  Enter `/add 12 cut location=Torso`.
 
@@ -133,7 +133,7 @@ Use a disposable unlinked NPC token with **30 current HP, DR 4 at Torso**, and n
 
 ## Validation and sources
 
-The repository's automated tests exercise the parser, permissions, token deduplication, the native GGA calculator and HP/FP application, per-recipient DR, armour divisors, Vitals, automatic Unliving detection, quiet cards, repeated clicks, Apply Multiple, cancellation, permission revocation, partial-update failure, custom wounding multipliers, and direct application.  Foundry documents and UI services are mocked; this is not a live-server certification.  Version 0.1.1 passed 9 additional HUD/context-menu regression checks, including DOM insertion and clicks using LinkeDOM, alongside the 5 portable core tests.  These are not a full browser/Foundry rendering test; confirm the new HUD in the live world.
+The repository's automated tests exercise the parser, permissions, token deduplication, the native GGA calculator and HP/FP application, per-recipient DR, armour divisors, Vitals, automatic Unliving detection, quiet cards, repeated clicks, Apply Multiple, cancellation, permission revocation, partial-update failure, custom wounding multipliers, and direct application.  Version 0.1.1 also passed 9 HUD/context-menu regression checks, including DOM insertion and clicks using LinkeDOM, alongside the 5 portable core tests.
 
 Run the portable tests with Node.js 20 or newer:
 
