@@ -1,6 +1,6 @@
 import { ID, canUse, commonValues, locationFor } from './core.mjs';
 
-const rootOf = element => element?.[0] ?? element;
+const rootOf = (element) => element?.[0] ?? element;
 
 /** Extend only our own dialog. GGA still constructs the calculator, reads DR,
  * calculates injury, updates the actor, and creates its usual result cards. */
@@ -9,14 +9,28 @@ export function createManualDialogClass(NativeADD) {
     constructor(session, recipient, seed) {
       const { location, fallback } = locationFor(recipient.actor, seed.hitlocation);
       // GGA 0.18.23 assumes an active GM exists when damage has no attacker.
-      if (!game.users.find(u => u.isGM && u.active)) {
-        throw new Error('Manual damage needs an active GM: GGA 0.18 currently assumes one exists for damage without an attacker.');
+      if (!game.users.find((u) => u.isGM && u.active)) {
+        throw new Error(
+          'Manual damage needs an active GM: GGA 0.18 currently assumes one exists for damage without an attacker.',
+        );
       }
-      super(recipient.actor, {
-        attacker: null, dice: '', damage: seed.damage, damageType: seed.damageType,
-        armorDivisor: seed.armorDivisor, damageModifier: seed.damageModifier ?? '',
-        hitlocation: location, token: recipient.token,
-      }, { id: `${ID}-${foundry.utils.randomID()}`, classes: [...NativeADD.defaultOptions.classes, ID] });
+      super(
+        recipient.actor,
+        {
+          attacker: null,
+          dice: '',
+          damage: seed.damage,
+          damageType: seed.damageType,
+          armorDivisor: seed.armorDivisor,
+          damageModifier: seed.damageModifier ?? '',
+          hitlocation: location,
+          token: recipient.token,
+        },
+        {
+          id: `${ID}-${foundry.utils.randomID()}`,
+          classes: [...NativeADD.defaultOptions.classes, ID],
+        },
+      );
       this.session = session;
       this.recipient = recipient;
       this.isSimpleDialog = false;
@@ -35,7 +49,10 @@ export function createManualDialogClass(NativeADD) {
       this._applied = false;
       this._advancing = false;
       this._focusDamage = true;
-      if (fallback) ui.notifications.warn(`${recipient.name}: "${seed.hitlocation}" is unavailable; review ${location} instead.`);
+      if (fallback)
+        ui.notifications.warn(
+          `${recipient.name}: "${seed.hitlocation}" is unavailable; review ${location} instead.`,
+        );
     }
 
     // The native constructor may roll a random hit location or optional Body Hits
@@ -52,8 +69,12 @@ export function createManualDialogClass(NativeADD) {
     }
 
     async _render(...args) {
-      try { return await super._render(...args); }
-      catch (error) { this.session?.finish(false); throw error; }
+      try {
+        return await super._render(...args);
+      } catch (error) {
+        this.session?.finish(false);
+        throw error;
+      }
     }
 
     activateListeners(html) {
@@ -72,29 +93,44 @@ export function createManualDialogClass(NativeADD) {
       const apply = document.createElement('button');
       apply.type = 'button';
       apply.className = 'manual-add-primary';
-      apply.textContent = this.session.index < this.session.recipients.length - 1
-        ? 'Apply calculated injury and next' : 'Apply calculated injury and close';
+      apply.textContent =
+        this.session.index < this.session.recipients.length - 1
+          ? 'Apply calculated injury and next'
+          : 'Apply calculated injury and close';
       apply.disabled = this._applied || this._busy;
-      apply.addEventListener('click', ev => {
-        ev.preventDefault(); ev.stopPropagation();
+      apply.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
         void this.submitInjuryApply(ev, false, this._calculator.showApplyAction);
       });
       const privacy = document.createElement('small');
-      privacy.textContent = this._calculator.showApplyAction ? 'Public result' : 'Quiet result (GGA setting)';
+      privacy.textContent = this._calculator.showApplyAction
+        ? 'Public result'
+        : 'Quiet result (GGA setting)';
       const next = document.createElement('button');
-      next.type = 'button'; next.textContent = this._applied ? 'Next / Finish' : 'Skip';
+      next.type = 'button';
+      next.textContent = this._applied ? 'Next / Finish' : 'Skip';
       next.disabled = this._busy;
-      next.addEventListener('click', ev => { ev.preventDefault(); void this.advance(); });
+      next.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        void this.advance();
+      });
       const cancel = document.createElement('button');
-      cancel.type = 'button'; cancel.textContent = 'Cancel remaining'; cancel.disabled = this._busy;
-      cancel.addEventListener('click', ev => { ev.preventDefault(); void this.close(); });
+      cancel.type = 'button';
+      cancel.textContent = 'Cancel remaining';
+      cancel.disabled = this._busy;
+      cancel.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        void this.close();
+      });
       controls.append(apply, next, cancel, privacy);
       panel.append(controls);
       if (this.session.recipients.length > 1) {
         const note = document.createElement('small');
-        note.textContent = this.session.index === 0
-          ? 'The basic damage, type, divisor, modifier, and location entered for this first recipient seed the remaining dialogs. Each recipient’s DR and other options are loaded afresh.'
-          : 'Changes here affect this recipient only. Review location, distance, and other options before applying.';
+        note.textContent =
+          this.session.index === 0
+            ? 'The basic damage, type, divisor, modifier, and location entered for this first recipient seed the remaining dialogs. Each recipient’s DR and other options are loaded afresh.'
+            : 'Changes here affect this recipient only. Review location, distance, and other options before applying.';
         panel.append(note);
       }
       content.prepend(panel);
@@ -103,7 +139,7 @@ export function createManualDialogClass(NativeADD) {
       if (direct?.tagName === 'BUTTON') direct.textContent = 'Apply directly (ignore DR)';
       const quiet = root.querySelector('#apply-secretly');
       if (quiet?.tagName === 'BUTTON') quiet.textContent = 'Apply directly, quietly (ignore DR)';
-      root.querySelectorAll('[id^="apply-"]').forEach(el => {
+      root.querySelectorAll('[id^="apply-"]').forEach((el) => {
         if (this._applied && (el.tagName === 'BUTTON' || el.closest('.dropdown-content'))) {
           el.setAttribute('aria-disabled', 'true');
           if ('disabled' in el) el.disabled = true;
@@ -112,7 +148,8 @@ export function createManualDialogClass(NativeADD) {
       if (this._focusDamage) {
         this._focusDamage = false;
         const input = root.querySelector('#basicDamage');
-        input?.focus(); input?.select();
+        input?.focus();
+        input?.select();
       }
     }
 
@@ -123,7 +160,9 @@ export function createManualDialogClass(NativeADD) {
       }
       const scene = this.recipient.document.parent;
       if (scene?.tokens?.get && !scene.tokens.get(this.recipient.document.id)) {
-        throw new Error('This token was deleted. Cancel the queue and select the current recipients.');
+        throw new Error(
+          'This token was deleted. Cancel the queue and select the current recipients.',
+        );
       }
     }
 
@@ -160,7 +199,8 @@ export function createManualDialogClass(NativeADD) {
           throw new Error('Number of applications must be a positive whole number.');
         }
         const [resource, path] = this._calculator.resource;
-        if (!resource || !path || !Number.isFinite(resource.value)) throw new Error('The recipient has no valid destination resource.');
+        if (!resource || !path || !Number.isFinite(resource.value))
+          throw new Error('The recipient has no valid destination resource.');
         // Freeze common attack inputs before per-recipient calculations.
         this.session.capture(this._calculator);
         if (direct) {
@@ -173,7 +213,10 @@ export function createManualDialogClass(NativeADD) {
           const injury = this._calculator.pointsToApply;
           // Render GGA's current calculation for the result card. The visible
           // table may be one render behind a just-edited damage field.
-          const current = await this._renderTemplate('apply-damage-dialog.hbs', await this.getData());
+          const current = await this._renderTemplate(
+            'apply-damage-dialog.hbs',
+            await this.getData(),
+          );
           const results = $(current).find('.results-table').clone().html();
           for (let index = 0; index < this.timesToApply; index++) {
             await this.resolveInjury(true, injury, publicly, results);
@@ -186,7 +229,9 @@ export function createManualDialogClass(NativeADD) {
         return true;
       } catch (error) {
         console.error(`${ID} | Apply failed`, error);
-        ui.notifications.error(`Manual damage: ${error.message}${this._applied ? ' Some damage was already applied; this recipient is locked to prevent applying it again.' : ''}`);
+        ui.notifications.error(
+          `Manual damage: ${error.message}${this._applied ? ' Some damage was already applied; this recipient is locked to prevent applying it again.' : ''}`,
+        );
         this._busy = false;
         this.render(false);
         return false;
@@ -195,7 +240,8 @@ export function createManualDialogClass(NativeADD) {
 
     async resolveInjury(keepOpen, injury, publicly, results = null) {
       this.assertPermission();
-      if (!Number.isFinite(injury) || injury < 0) throw new Error('Calculated injury is invalid. Review the ADD inputs.');
+      if (!Number.isFinite(injury) || injury < 0)
+        throw new Error('Calculated injury is invalid. Review the ADD inputs.');
       const answer = await super.resolveInjury(keepOpen, injury, publicly, results);
       // Mark after every successful update so a partial Apply Multiple failure
       // cannot replay damage already committed by earlier iterations.
@@ -234,11 +280,16 @@ export class RecipientSession {
     this.done = false;
     this.captured = false;
     this.onFinish = onFinish;
-    this.completion = new Promise(resolve => { this.resolve = resolve; });
+    this.completion = new Promise((resolve) => {
+      this.resolve = resolve;
+    });
   }
 
   capture(calculator) {
-    if (!this.captured) { this.seed = commonValues(calculator); this.captured = true; }
+    if (!this.captured) {
+      this.seed = commonValues(calculator);
+      this.captured = true;
+    }
   }
 
   show() {
