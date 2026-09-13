@@ -5,13 +5,35 @@
   border-radius: 6px;
   background: var(--color-bg-option, rgba(128, 110, 80, 0.1));
 }
-.gurps-manual-add .manual-add-panel p { margin: 0 0 8px; }
-.gurps-manual-add .manual-add-controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
-.gurps-manual-add .manual-add-controls button { width: auto; flex: 0 1 auto; padding: 2px 9px; }
-.gurps-manual-add .manual-add-primary { font-weight: bold; }
-.gurps-manual-add .manual-add-panel small { display: block; line-height: 1.35; }
-.gurps-manual-add [aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
-.manual-add-result { margin-bottom: 5px; }
+.gurps-manual-add .manual-add-panel p {
+  margin: 0 0 8px;
+}
+.gurps-manual-add .manual-add-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.gurps-manual-add .manual-add-controls button {
+  width: auto;
+  flex: 0 1 auto;
+  padding: 2px 9px;
+}
+.gurps-manual-add .manual-add-primary {
+  font-weight: bold;
+}
+.gurps-manual-add .manual-add-panel small {
+  display: block;
+  line-height: 1.35;
+}
+.gurps-manual-add [aria-disabled='true'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.manual-add-result {
+  margin-bottom: 5px;
+}
 
 .manual-add-hud-group {
   position: absolute;

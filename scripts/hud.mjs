@@ -2,7 +2,7 @@ import { ID, canUse } from './core.mjs';
 
 // A native HTMLFormElement is also indexable: form[0] is its first control,
 // not a jQuery wrapper. Check nodeType before unwrapping.
-const elementOf = value => value?.nodeType ? value : (value?.[0] ?? value);
+const elementOf = (value) => (value?.nodeType ? value : (value?.[0] ?? value));
 const enabled = () => game.settings.get(ID, 'enabled') && game.settings.get(ID, 'hudButton');
 
 // Context rows take precedence over a HUD's bound token. Never substitute the
@@ -17,12 +17,15 @@ export function tokenFor(application, target) {
   const object = application?.object;
   if (object?.actor) return object;
   const document = application?.document;
-  if (document?.documentName === 'Token') return document.object ?? canvas.tokens.get(document.id) ?? null;
+  if (document?.documentName === 'Token')
+    return document.object ?? canvas.tokens.get(document.id) ?? null;
   return null;
 }
 
 function permitted(token) {
-  return enabled() && canUse(token?.actor, game.user, game.settings.get('gurps', 'only-gms-open-add'));
+  return (
+    enabled() && canUse(token?.actor, game.user, game.settings.get('gurps', 'only-gms-open-add'))
+  );
 }
 
 export function createHudIntegration(launch) {
@@ -57,21 +60,25 @@ export function createHudIntegration(launch) {
     button.dataset.tooltip = 'Manual Damage';
     button.setAttribute('aria-label', 'Manual Damage');
     button.innerHTML = '<i class="fa-solid fa-calculator" aria-hidden="true"></i>';
-    button.addEventListener('click', event => {
-      event.preventDefault(); event.stopPropagation();
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       void activate(hud);
     });
     host.append(button);
   }
 
   function context(application, menuItems) {
-    if (!enabled() || !Array.isArray(menuItems) || menuItems.some(item => item.manualDamageEntry)) return;
+    if (!enabled() || !Array.isArray(menuItems) || menuItems.some((item) => item.manualDamageEntry))
+      return;
     menuItems.push({
       name: 'Manual Damage',
       icon: '<i class="fa-solid fa-calculator"></i>',
       manualDamageEntry: true,
-      condition: target => permitted(tokenFor(application, target)),
-      callback: target => { void activate(application, target); },
+      condition: (target) => permitted(tokenFor(application, target)),
+      callback: (target) => {
+        void activate(application, target);
+      },
     });
   }
 

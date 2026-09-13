@@ -5,17 +5,24 @@ export function parseCommand(line) {
   if (!COMMAND.test(line.trim())) throw new Error('Use /add or /madd.');
   const input = line.trim().replace(/^\/\S+\s*/, '');
   const words = [];
-  let word = '', quote = null, started = false;
+  let word = '',
+    quote = null,
+    started = false;
   for (const char of input) {
     if (quote) {
       if (char === quote) quote = null;
       else word += char;
     } else if (char === '"' || char === "'") {
-      quote = char; started = true;
+      quote = char;
+      started = true;
     } else if (/\s/.test(char)) {
       if (started) words.push(word);
-      word = ''; started = false;
-    } else { word += char; started = true; }
+      word = '';
+      started = false;
+    } else {
+      word += char;
+      started = true;
+    }
   }
   if (quote) throw new Error('Close the quotation marks around the location.');
   if (started) words.push(word);
@@ -40,15 +47,19 @@ export function validateSeed(input = {}, damageTypes = {}) {
   const damage = Number(input.damage ?? 0);
   if (!Number.isSafeInteger(damage) || damage < 0) throw new Error('Basic damage is out of range.');
   const requestedType = String(input.damageType ?? 'cr').toLowerCase();
-  const damageType = Object.keys(damageTypes).find(key => key.toLowerCase() === requestedType) ?? requestedType;
+  const damageType =
+    Object.keys(damageTypes).find((key) => key.toLowerCase() === requestedType) ?? requestedType;
   if (!Object.hasOwn(damageTypes, damageType) || damageTypes[damageType].nodisplay) {
-    throw new Error(`Unknown damage type: ${damageType}. Use a GGA abbreviation such as cr, cut, imp, pi, burn, tox, or fat.`);
+    throw new Error(
+      `Unknown damage type: ${damageType}. Use a GGA abbreviation such as cr, cut, imp, pi, burn, tox, or fat.`,
+    );
   }
   const armorDivisor = Number(input.armorDivisor ?? 1);
   if (!Number.isFinite(armorDivisor) || (armorDivisor <= 0 && armorDivisor !== -1)) {
     throw new Error('Armour divisor must be positive, or -1 to ignore DR.');
   }
-  const hitlocation = input.hitlocation === undefined ? undefined : String(input.hitlocation).trim();
+  const hitlocation =
+    input.hitlocation === undefined ? undefined : String(input.hitlocation).trim();
   if (hitlocation !== undefined && !hitlocation) throw new Error('Hit location cannot be empty.');
   return { damage, damageType, armorDivisor, hitlocation };
 }
@@ -59,16 +70,25 @@ export function canUse(actor, user, gmOnly) {
 
 // Linked tokens share an Actor document; unlinked tokens own distinct synthetic actors.
 export function collectRecipients(tokens, user, gmOnly) {
-  const seen = new Set(), recipients = [], skipped = [], duplicates = [];
+  const seen = new Set(),
+    recipients = [],
+    skipped = [],
+    duplicates = [];
   for (const token of tokens) {
     const doc = token.document ?? token;
     const actor = token.actor ?? doc.actor;
     const name = doc.name ?? actor?.name ?? 'Token';
-    if (!canUse(actor, user, gmOnly)) { skipped.push(name); continue; }
+    if (!canUse(actor, user, gmOnly)) {
+      skipped.push(name);
+      continue;
+    }
     const key = doc.actorLink
       ? (actor.uuid ?? `Actor.${actor.id}`)
       : (doc.uuid ?? actor.uuid ?? `${doc.parent?.id}.${doc.id}`);
-    if (seen.has(key)) { duplicates.push(name); continue; }
+    if (seen.has(key)) {
+      duplicates.push(name);
+      continue;
+    }
     seen.add(key);
     recipients.push({ token: token.object ?? token, document: doc, actor, key, name });
   }
@@ -77,14 +97,15 @@ export function collectRecipients(tokens, user, gmOnly) {
 
 export function locationFor(actor, requested) {
   const locations = actor.hitLocationsWithDR ?? [];
-  const names = locations.map(x => x.where);
+  const names = locations.map((x) => x.where);
   const wanted = requested ?? actor.defaultHitLocation;
   if (wanted === 'Large-Area') return { location: wanted, fallback: false };
-  const match = names.find(x => x.toLowerCase() === String(wanted).toLowerCase());
+  const match = names.find((x) => x.toLowerCase() === String(wanted).toLowerCase());
   if (match) return { location: match, fallback: false };
   // Opening a manual calculator must not trigger a default Random location roll.
-  const location = names.find(x => x === 'Torso') ?? names[0];
-  if (!location) throw new Error(`${actor.name} has no hit locations. Add them on the actor sheet first.`);
+  const location = names.find((x) => x === 'Torso') ?? names[0];
+  if (!location)
+    throw new Error(`${actor.name} has no hit locations. Add them on the actor sheet first.`);
   return { location, fallback: requested !== undefined };
 }
 
@@ -95,6 +116,7 @@ export function commonValues(calculator) {
     armorDivisor: calculator.armorDivisor,
     hitlocation: calculator.hitLocation,
     damageModifier: calculator.damageModifier,
-    userEnteredWoundModifier: calculator.damageType === 'User Entered' ? calculator.userEnteredWoundModifier : undefined,
+    userEnteredWoundModifier:
+      calculator.damageType === 'User Entered' ? calculator.userEnteredWoundModifier : undefined,
   };
 }
