@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.1.1
+# GURPS Manual Damage 0.1.2
 
 Open the GURPS 4e Game Aid (GGA) Apply Damage Dialog without rolling damage first. The module uses GGA's actual calculator and damage-application code. DR, hit locations, damage types, wounding modifiers, and the other actor data and options that GGA normally uses remain available.
 
@@ -6,7 +6,7 @@ Target: Foundry VTT 14 and GGA 0.18.x. Tested in live Foundry worlds with GGA 0.
 
 ## Update from 0.1.0
 
-Replace the existing `Data/modules/gurps-manual-add` folder with the `gurps-manual-add` folder in this ZIP. Restart Foundry and reload the world so it loads the new JavaScript. Confirm the installed version is **0.1.1** and **Show Manual Damage on token HUD** is enabled in module settings.
+Replace the existing `Data/modules/gurps-manual-add` folder with the `gurps-manual-add` folder in this ZIP. Restart Foundry and reload the world so it loads the new JavaScript. Confirm the installed version is **0.1.2** and **Show Manual Damage on token HUD** is enabled in module settings.
 
 Right-click a token and look for the **calculator icon**, with the tooltip **Manual Damage**. A **Manual Damage** entry is also registered in Foundry 14's supported token context menus. These controls open the dialog for the right-clicked token. Use `/add` for all selected tokens.
 
@@ -121,43 +121,7 @@ await game.modules.get('gurps-manual-add').api.command('/add 12 cut');
 
 The promise resolves `true` when the queue finishes, including skipped recipients, or `false` if cancelled, rejected, or unable to open. It is not a count of actors damaged. Awaited OtF/chat command processing waits for the queue to finish.
 
-## Functional check
-
-Use a disposable unlinked NPC token with **30 current HP, DR 4 at Torso**, and no relevant injury modifiers. Enter `/add 12 cut location=Torso`.
-
-1. Confirm the full ADD shows that token's DR 4 and 12 basic cutting damage.
-2. With normal location/wounding rules enabled, confirm **12 injury**: `(12 − 4) × 1.5`.
-3. Use **Apply calculated injury**. HP should become **18**, with one labelled result card.
-4. Repeat with two independent NPCs, DR 4 and DR 8. The same 12 cutting should inflict 12 and 6 injury respectively, reviewed separately.
-5. Check the HUD button, Chat macro, and OtF link. Check player access with your intended GGA permissions.
-
-## Validation and sources
-
-The repository's automated tests exercise the parser, permissions, token deduplication, the native GGA calculator and HP/FP application, per-recipient DR, armour divisors, Vitals, automatic Unliving detection, quiet cards, repeated clicks, Apply Multiple, cancellation, permission revocation, partial-update failure, custom wounding multipliers, and direct application. Version 0.1.1 also passed 9 HUD/context-menu regression checks, including DOM insertion and clicks using LinkeDOM, alongside the 5 portable core tests.
-
-Run the portable tests with Node.js 20 or newer:
-
-```sh
-node --test tests/*.test.mjs
-```
-
-For the native integration tests, set `GGA_SOURCE` to a GGA 0.18 source directory containing `module/` and `lib/`. Without it, those integration tests are explicitly skipped.
-
-```sh
-GGA_SOURCE=/path/to/gurps node --test tests/*.test.mjs
-```
-
-The HUD DOM tests use the optional development-only `linkedom@0.18.12` package. Install it outside the module and set `MANUAL_ADD_DOM` to its absolute package directory, or install it where Node can resolve `linkedom`. Without it, the five DOM-dependent tests are explicitly skipped; the hook and permission tests still run. The installed Foundry module has no LinkeDOM dependency.
-
-GURPS 4e rules context: **Basic Set, pp. 378–379** (damage, DR, and injury), and **pp. 398–400** (hit locations). The module delegates rules handling to GGA and introduces no house rules. It does not expand what GGA automatically recognises on an actor, or correct independent GGA calculation issues.
-
-Implementation references:
-
-- https://github.com/crnormand/gurps/blob/v0.18.23/module/damage/applydamage.js
-- https://github.com/crnormand/gurps/blob/v0.18.23/module/damage/damagecalculator.js
-- https://github.com/crnormand/gurps/blob/v0.18.23/module/chat.js
-- https://foundryvtt.com/api/classes/foundry.applications.hud.TokenHUD.html
-- https://foundryvtt.com/api/functions/hookEvents.getPlaceableContextOptions.html
+## Support and licence
 
 Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual-add/issues). Released under the [MIT licence](LICENSE).
 

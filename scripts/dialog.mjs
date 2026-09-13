@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import { ID, canUse, commonValues, locationFor } from './core.mjs';
 
 const rootOf = (element) => element?.[0] ?? element;
@@ -228,7 +229,7 @@ export function createManualDialogClass(NativeADD) {
         else await this.advance();
         return true;
       } catch (error) {
-        console.error(`${ID} | Apply failed`, error);
+        log.error('Apply failed', error);
         ui.notifications.error(
           `Manual damage: ${error.message}${this._applied ? ' Some damage was already applied; this recipient is locked to prevent applying it again.' : ''}`,
         );
@@ -298,7 +299,7 @@ export class RecipientSession {
       this.dialog = new this.DialogClass(this, this.recipients[this.index], { ...this.seed });
       this.dialog.render(true, { height: 'auto' });
     } catch (error) {
-      console.error(`${ID} | Open failed`, error);
+      log.error('Open failed', error);
       ui.notifications.error(`Manual damage: ${error.message}`);
       this.finish(false);
     }

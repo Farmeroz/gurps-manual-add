@@ -1,0 +1,15 @@
+[
+  {
+    "directory": "gga",
+    "environment": "GGA_SOURCE",
+    "repository": "crnormand/gurps",
+    "commit": "4fb95f7ed8e114993c65ef77dc912a7b77957b02",
+    "version": "0.18.23",
+    "files": [
+      "system.json",
+      "lib/miscellaneous-settings.js",
+      "module/damage/applydamage.js",
+      "module/damage/damagecalculator.js"
+    ]
+  }
+]

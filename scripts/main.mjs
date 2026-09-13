@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import { ID, parseCommand, validateSeed, collectRecipients } from './core.mjs';
 import { createManualDialogClass, RecipientSession } from './dialog.mjs';
 import { registerHudIntegration } from './hud.mjs';
@@ -74,7 +75,7 @@ export async function open(options = {}) {
     session.show();
     return await session.completion;
   } catch (error) {
-    console.error(`${ID} |`, error);
+    log.error(error);
     ui.notifications.error(`Manual damage: ${error.message}`);
     return false;
   } finally {
