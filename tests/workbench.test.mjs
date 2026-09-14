@@ -26,7 +26,7 @@ const recipients = [
   { key: 'two', name: 'Two', actor: { hitLocationsWithDR: [{ where: 'Torso' }] } },
 ];
 
-function setup(options = { expression: '2d+1 cut' }, selected = recipients) {
+function setup(options = { expression: '2d+1 cut' }, selected = recipients, overrides = {}) {
   const { document, window } = parseHTML('<html><body></body></html>');
   // linkedom exposes select.value as getter-only; browsers implement both.
   Object.defineProperty(window.HTMLSelectElement.prototype, 'value', {
@@ -76,6 +76,7 @@ function setup(options = { expression: '2d+1 cut' }, selected = recipients) {
       };
     },
   };
+  Object.assign(services, overrides);
   const app = new Workbench(options, services);
   document.body.innerHTML = app.markup();
   app.element = document.querySelector('form');
@@ -213,4 +214,56 @@ test('all new controls have explicit help and the HTML form is attached intact',
   for (const node of f.app.element.querySelectorAll('[data-action]'))
     assert.ok(helpConfig.actions[node.dataset.action], node.dataset.action);
   assert.match(f.app.element.querySelector('.manual-recipient-names').textContent, /One, Two/);
+});
+
+test('attached roller returns recorded seeds without opening another queue, then closes', async () => {
+  let accepted;
+  const f = setup(
+    { roll: true, damageType: 'imp', armorDivisor: 2, hitlocation: 'Left Arm' },
+    recipients,
+    {
+      returnTargetName: 'One',
+      receiveRolls: async (_recipients, seeds) => {
+        accepted = seeds;
+      },
+    },
+  );
+  assert.equal(
+    f.app.element.querySelector('[data-action="review"]').textContent,
+    'Use rolled damage',
+  );
+  assert.equal(f.app.element.querySelector('[data-action="refreshRecipients"]').hidden, true);
+  assert.equal(f.app.element.querySelector('[data-field="hitlocation"]').disabled, true);
+  await f.app.rollDamage();
+  await f.app.review();
+  assert.deepEqual(
+    accepted.map((s) => [s.damage, s.damageType, s.armorDivisor]),
+    [
+      [6, 'imp', 2],
+      [6, 'imp', 2],
+    ],
+  );
+  assert.equal(f.count().opened.length, 0);
+  assert.equal(f.app.closed, true);
+  assert.equal(f.app.batch.used, true);
+});
+
+test('closing an optional roller or rejecting a stale return leaves the ADD untouched', async () => {
+  let returns = 0;
+  const f = setup({ roll: true }, recipients, {
+    returnTargetName: 'One',
+    receiveRolls: () => {
+      throw new Error('ADD finished');
+    },
+  });
+  await f.app.rollDamage();
+  assert.equal(await f.app.review(), false);
+  assert.match(f.app.error, /ADD finished/);
+  assert.equal(f.app.batch.used, false);
+  f.app.services.receiveRolls = () => {
+    returns++;
+  };
+  await f.app.close();
+  assert.equal(returns, 0);
+  assert.equal(f.count().opened.length, 0);
 });

@@ -27,6 +27,7 @@ export function createWorkbenchClass(Base = globalThis.Application) {
     constructor(options = {}, services) {
       super();
       this.services = { roller: nativeDamageRoller, ...services };
+      this.attached = Boolean(services.receiveRolls);
       this.recipients = this.services.initialRecipients ?? this.services.readRecipients();
       this.draft = {
         mode: options.expression || options.roll ? 'roll' : 'fixed',
@@ -173,7 +174,8 @@ export function createWorkbenchClass(Base = globalThis.Application) {
       if (!root) return;
       const locked = this.busy || this.queueActive;
       root.querySelectorAll('[data-field]').forEach((node) => {
-        node.disabled = locked;
+        node.disabled =
+          locked || (this.attached && ['mode', 'hitlocation'].includes(node.dataset.field));
         if (node === node.ownerDocument.activeElement) return;
         if (node.type === 'checkbox') node.checked = this.draft[node.dataset.field];
         else node.value = this.draft[node.dataset.field];
@@ -182,6 +184,10 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         node.hidden = this.draft.mode !== 'roll';
       });
       root.querySelector('.manual-fixed-input').hidden = this.draft.mode !== 'fixed';
+      root.querySelector('[data-field="mode"]').closest('label').hidden = this.attached;
+      if (this.attached)
+        root.querySelector('form > p, .manual-workbench-form > p').textContent =
+          `Roll for ${this.services.returnTargetName} and the remaining recipients, then return the result to the existing ADD. Its location and other settings are retained. Applying injury remains a separate action.`;
       root.querySelector('.manual-recipient-names').textContent = this.recipients.length
         ? this.recipients.map((r) => r.name).join(', ')
         : 'No recipients selected. You can still make a shared roll for chat only.';
@@ -205,17 +211,25 @@ export function createWorkbenchClass(Base = globalThis.Application) {
             ? 'Roll again'
             : 'Roll damage';
       const review = root.querySelector('[data-action="review"]');
+      review.textContent = this.attached ? 'Use rolled damage' : 'Review and apply';
+      if (this.attached)
+        review.dataset.help =
+          'Return the recorded damage, type, and divisor to the existing ADD and seed the remaining recipients. Keeps location, DR overrides, armour layers, and other ADD settings. Does not apply injury.';
+      if (this.attached)
+        root.querySelector('[data-field="hitlocation"]').dataset.help =
+          'This location belongs to the existing ADD and is retained when damage returns. Change location in the ADD itself.';
       review.disabled =
         locked ||
         this.handedOff ||
         !this.recipients.length ||
         (this.draft.mode === 'roll' && (!this.batch?.messageId || this.batch.hidden));
       root.querySelector('[data-action="refreshRecipients"]').disabled = locked || this.handedOff;
+      root.querySelector('[data-action="refreshRecipients"]').hidden = this.attached;
       root.querySelector('[data-action="close"]').disabled = this.busy;
     }
 
     refreshRecipients() {
-      if (this.busy || this.queueActive || this.handedOff) return;
+      if (this.attached || this.busy || this.queueActive || this.handedOff) return;
       try {
         this.recipients = this.services.readRecipients();
         if (this.batch?.distribution === 'separate') {
@@ -270,6 +284,8 @@ export function createWorkbenchClass(Base = globalThis.Application) {
       this.refresh();
       try {
         this.services.assertEnabled();
+        if (this.attached && this.draft.mode !== 'roll')
+          throw new Error('Use the ADD itself to enter fixed damage.');
         const seeds = this.draft.mode === 'roll' ? this.batch?.seedsFor(this.recipients) : null;
         if (this.draft.mode === 'roll' && !seeds)
           throw new Error('Roll damage before reviewing it.');
@@ -279,16 +295,21 @@ export function createWorkbenchClass(Base = globalThis.Application) {
             { ...this.draft, hitlocation: this.draft.hitlocation || undefined },
             this.types(),
           );
-        const session = await this.services.startQueue(this.recipients, seed, seeds);
+        const session = this.attached
+          ? await this.services.receiveRolls(this.recipients, seeds)
+          : await this.services.startQueue(this.recipients, seed, seeds);
         // Consume the batch only after the ADD session is created. Closing or
         // partially applying a queue does not make that batch reusable.
         if (this.batch) this.batch.used = true;
         this.handedOff = true;
-        this.queueActive = true;
-        session.completion.finally(() => {
-          this.queueActive = false;
-          this.refresh();
-        });
+        if (this.attached) this.closeAfterReturn = true;
+        else {
+          this.queueActive = true;
+          session.completion.finally(() => {
+            this.queueActive = false;
+            this.refresh();
+          });
+        }
         return true;
       } catch (error) {
         this.error = error.message;
@@ -296,6 +317,7 @@ export function createWorkbenchClass(Base = globalThis.Application) {
       } finally {
         this.busy = false;
         this.refresh();
+        if (this.closeAfterReturn) await this.close();
       }
     }
 

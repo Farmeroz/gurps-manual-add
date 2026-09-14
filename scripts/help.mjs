@@ -4,6 +4,8 @@ export const helpConfig = {
   scope:
     '#context-menu .context-item:has(.manual-add-menu-icon), .manual-add-panel, .manual-add-hud, .gurps-manual-add, [name^="gurps-manual-add."], [data-key^="gurps-manual-add."], [data-tool="gurps-manual-add"], [data-control="gurps-manual-add"]',
   actions: {
+    openRoller:
+      'Open an optional damage roller for this recipient and the remaining queue. Return its result to this same ADD without applying injury or changing location, DR overrides, or temporary armour settings.',
     roll: 'Roll the displayed damage and record it in chat without applying injury. Retry keeps dice already rolled; Roll again starts a new damage event.',
     review:
       'Open the ADD for the listed recipients. Review DR, armour layers, and injury before applying. A rolled batch can be sent to one queue only.',
@@ -40,7 +42,7 @@ export const helpConfig = {
   rules: [
     [
       '.manual-add-hud',
-      'Open the damage workbench for this token. Enter fixed damage or prepare a roll, then review it in the ADD. Opening never rolls or applies damage.',
+      'Open the ADD for this token. Enter basic damage, or use its optional Roll damage button. Opening never rolls or applies damage.',
     ],
     [
       '.manual-add-primary',

@@ -403,6 +403,83 @@ if (!source) {
     assert.equal(rolls, 0, 'opening and applying recorded results never rerolls damage');
   });
 
+  test('optional roller returns to the same ADD and preserves recipient overrides without applying', async () => {
+    reset();
+    const s = session([actor('one'), actor('two')]);
+    const d = s.dialog,
+      calc = d._calculator;
+    calc.userEnteredDR = 7;
+    calc.hitLocation = 'Left Arm';
+    calc.timesToApply = 2;
+    const target = s.rollTarget(d);
+    target.accept(
+      [9, 13].map((damage) => ({
+        damage,
+        damageType: 'imp',
+        armorDivisor: 2,
+        hitlocation: 'Vitals',
+        rollInfo: 'Recorded dice',
+      })),
+    );
+    assert.equal(s.dialog, d);
+    assert.equal(d._calculator, calc);
+    assert.equal(calc.basicDamage, 9);
+    assert.equal(calc.damageType, 'imp');
+    assert.equal(calc.armorDivisor, 2);
+    assert.equal(calc.userEnteredDR, 7);
+    assert.equal(calc.hitLocation, 'Left Arm');
+    assert.equal(updates.length, 0);
+    assert.equal(rolls, 0);
+    assert.throws(() => target.accept([]), /changed or finished/);
+    await d.advance();
+    assert.equal(s.dialog._calculator.basicDamage, 13);
+    assert.equal(s.dialog._calculator.hitLocation, 'Left Arm');
+    assert.notEqual(s.dialog._calculator.userEnteredDR, 7);
+  });
+
+  test('mid-queue roller covers only current and remaining recipients and rejects stale returns', async () => {
+    reset();
+    const a = actor('one'),
+      b = actor('two'),
+      c = actor('three');
+    const s = session([a, b, c]);
+    const stale = s.rollTarget(s.dialog);
+    await s.dialog.submitInjuryApply({}, false, true);
+    assert.throws(() => stale.accept([]), /changed or finished/);
+    const target = s.rollTarget(s.dialog);
+    assert.deepEqual(
+      target.recipients.map((r) => r.actor),
+      [b, c],
+    );
+    target.accept([5, 8].map((damage) => ({ damage, damageType: 'cr', armorDivisor: 1 })));
+    assert.equal(a.system.HP.value, 18);
+    assert.equal(updates.length, 1);
+    assert.equal(s.dialog._calculator.basicDamage, 5);
+    const closed = s.rollTarget(s.dialog);
+    await s.dialog.close();
+    assert.throws(() => closed.accept([]), /changed or finished/);
+    assert.equal(updates.length, 1);
+  });
+
+  test('optional roller cannot return during apply or after permissions are revoked', () => {
+    reset();
+    const a = actor('one');
+    const s = session([a]);
+    const d = s.dialog;
+    const target = s.rollTarget(d);
+    d._busy = true;
+    assert.throws(() => target.assertCurrent(), /changed or finished/);
+    d._busy = false;
+    game.user.isGM = false;
+    a.isOwner = false;
+    assert.throws(
+      () => target.accept([{ damage: 5, damageType: 'cr', armorDivisor: 1 }]),
+      /permission/,
+    );
+    assert.equal(d._calculator.basicDamage, 12);
+    assert.equal(updates.length, 0);
+  });
+
   test('rolled separate results use current Layered Armour with per-layer Hardened and native injury', async () => {
     reset();
     globalThis.document = parseHTML('<html><body></body></html>').document;
@@ -438,6 +515,25 @@ if (!source) {
     s.show();
     await s.dialog.getData();
     assert.equal(s.dialog._calculator.effectiveDR, 8);
+    const { stateFor } = await import(pathToFileURL(path.join(dir, 'scripts/integration.mjs')));
+    const state = stateFor(s.dialog);
+    state.override = {
+      schema: 1,
+      enabled: true,
+      layers: [
+        { ...newLayer(['Torso']), dr: 12, hardened: 1 },
+        { ...newLayer(['Torso']), dr: 6 },
+      ],
+    };
+    const savedOverride = state.override;
+    const sameDialog = s.dialog;
+    s.rollTarget(s.dialog).accept(seeds);
+    assert.equal(s.dialog, sameDialog);
+    assert.equal(
+      stateFor(s.dialog).override,
+      savedOverride,
+      'temporary armour settings survive the optional roller',
+    );
     await s.dialog.submitInjuryApply({}, false, true);
     await s.dialog.getData();
     assert.equal(s.dialog._calculator.basicDamage, 10);

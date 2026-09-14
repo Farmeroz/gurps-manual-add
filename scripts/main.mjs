@@ -9,7 +9,7 @@ let active = null,
   workbench = null,
   initialising = false;
 const HELP =
-  '/add opens the damage workbench. /add 12 cut opens fixed damage directly; /add 3d+2 cut prepares a roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /madd is an alias. Rolling never applies injury.';
+  '/add opens the ADD; its Roll damage button opens an optional roller. /add 12 cut prefills fixed damage; /add 3d+2 cut prepares a standalone roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /madd is an alias. Rolling never applies injury.';
 
 function setting(key) {
   return game.settings.get(ID, key);
@@ -92,6 +92,33 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
       rollSeeds,
     );
     active = session;
+    session.openRoller = (dialog) => {
+      const target = session.rollTarget(dialog);
+      const Workbench = createWorkbenchClass();
+      const calculator = dialog._calculator;
+      const roller = new Workbench(
+        {
+          roll: true,
+          damageType: calculator.damageType,
+          armorDivisor: calculator.armorDivisor,
+          hitlocation: calculator.hitLocation,
+        },
+        {
+          initialRecipients: target.recipients,
+          readRecipients: () => target.recipients,
+          assertEnabled: () => {
+            assertEnabled();
+            target.assertCurrent();
+          },
+          receiveRolls: (_recipients, seeds) => target.accept(seeds),
+          returnTargetName: dialog.recipient.name,
+        },
+      );
+      roller.options.id = `manual-damage-roller-${foundry.utils.randomID()}`;
+      roller.options.title = `Roll damage: ${dialog.recipient.name}`;
+      roller.render(true);
+      return roller;
+    };
     if (!session.show()) throw session.error ?? new Error('The ADD could not be opened.');
     return session;
   } finally {
@@ -102,9 +129,9 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
 export async function open(options = {}) {
   try {
     assertEnabled();
-    // Existing numeric macros retain their direct-to-ADD behaviour. An empty
-    // invocation or dice expression opens an editor and never rolls on launch.
-    if (options.damage === undefined || options.expression || options.roll) {
+    // Empty/numeric invocations open the ADD. Only explicit dice requests
+    // open the standalone roller; neither entry point rolls on launch.
+    if (options.expression || options.roll) {
       if (workbench?.rendered) {
         workbench.bringToTop();
         if (options.expression || options.roll)

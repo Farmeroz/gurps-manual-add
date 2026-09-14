@@ -52,13 +52,16 @@ try {
           return {};
         }
         activateListeners() {}
-        async close() {}
+        async close() {
+          this.closed = true;
+        }
       },
     );
-    globalThis.mount = (selected = true) => {
+    globalThis.mount = (selected = true, attached = false) => {
       globalThis.rollCount = 0;
       globalThis.chatCount = 0;
       globalThis.queues = [];
+      globalThis.returned = null;
       const recipients = selected
         ? ['One', 'Two'].map((name) => ({
             key: name,
@@ -70,6 +73,12 @@ try {
         { expression: '2d+1 cut' },
         {
           assertEnabled: () => {},
+          returnTargetName: 'One',
+          receiveRolls: attached
+            ? async (_recipients, seeds) => {
+                globalThis.returned = seeds;
+              }
+            : undefined,
           readRecipients: () => recipients,
           roller: async () => ({
             _getDiceData: () => ({}),
@@ -164,6 +173,33 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   assert.deepEqual(errors, []);
   console.log('PASS: optional keyboard tooltips, small-window layout, and no browser errors');
+  await page.evaluate(() => {
+    game.user.isGM = true;
+    helpOn = true;
+    mount(true, true);
+  });
+  await page.setViewportSize({ width: 1000, height: 1100 });
+  assert.equal(await page.locator('[data-action="review"]').textContent(), 'Use rolled damage');
+  assert.equal(await page.locator('[data-action="refreshRecipients"]').isVisible(), false);
+  assert.equal(await page.locator('[data-field="hitlocation"]').isDisabled(), true);
+  await page.locator('[data-action="roll"]').click();
+  await page.waitForFunction(() => app.batch?.messageId);
+  await page.locator('[data-action="review"]').focus();
+  await page.getByRole('tooltip').waitFor();
+  assert.match(await page.getByRole('tooltip').textContent(), /existing ADD/);
+  await page.keyboard.press('Escape');
+  await page.screenshot({
+    path: path.join(root, 'test-output/optional-roller-preview.png'),
+    fullPage: true,
+  });
+  await page.locator('[data-action="review"]').click();
+  await page.waitForFunction(() => app.closed);
+  assert.deepEqual(await page.evaluate(() => returned.map((s) => s.damage)), [7, 7]);
+  assert.equal(await page.evaluate(() => queues.length), 0);
+  assert.deepEqual(errors, []);
+  console.log(
+    'PASS: optional roller returns once to the existing ADD, closes, and opens no new queue',
+  );
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));

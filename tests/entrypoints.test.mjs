@@ -24,6 +24,9 @@ globalThis.ui = {
 };
 globalThis.foundry = { utils: { randomID: () => 'id', mergeObject: (a, b) => ({ ...a, ...b }) } };
 globalThis.Application = class {
+  constructor() {
+    this.options = {};
+  }
   static get defaultOptions() {
     return {};
   }
@@ -84,11 +87,24 @@ globalThis.canvas = {
 const { open, command, startQueue, readRecipients } = await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+test('empty command and HUD-style token options open the ADD without an intermediate screen', async () => {
+  const before = windows.length;
+  for (const invocation of [() => command('/add'), () => open({ tokens: [token] })]) {
+    const pending = invocation();
+    await tick();
+    assert.equal(dialogs.at(-1)._calculator.basicDamage, 0);
+    assert.equal(windows.length, before);
+    await dialogs.at(-1).close();
+    assert.equal(await pending, false);
+  }
+});
+
 test('dice commands launch an inert workbench with parsed type and divisor', async () => {
+  const before = dialogs.length;
   assert.equal(await command('/add 2d(2) imp'), true);
   assert.equal(windows.at(-1).draft.expression, '2d(2) imp');
   assert.equal(windows.at(-1).batch, null);
-  assert.equal(dialogs.length, 0);
+  assert.equal(dialogs.length, before);
   await windows.at(-1).close();
 });
 
@@ -98,6 +114,26 @@ test('numeric command keeps direct ADD and completion-promise behaviour', async 
   assert.equal(dialogs.at(-1)._calculator.basicDamage, 12);
   await dialogs.at(-1).close();
   assert.equal(await pending, false);
+});
+
+test('ADD button creates an attached roller prefilled from its calculator', async () => {
+  const pending = open({ damage: 8, damageType: 'imp', armorDivisor: 2 });
+  await tick();
+  const d = dialogs.at(-1);
+  assert.equal(d.openRoller(), true);
+  const roller = windows.at(-1);
+  assert.equal(roller.attached, true);
+  assert.equal(roller.draft.damageType, 'imp');
+  assert.equal(roller.draft.armorDivisor, '2');
+  assert.equal(roller.draft.hitlocation, 'Torso');
+  roller.services.receiveRolls(roller.recipients, [
+    { damage: 15, damageType: 'cut', armorDivisor: 3 },
+  ]);
+  assert.equal(dialogs.at(-1), d);
+  assert.equal(d._calculator.basicDamage, 15);
+  await roller.close();
+  await d.close();
+  await pending;
 });
 
 test('roll-only can open without scene or GM while ADD access still requires permission', async () => {
