@@ -9,7 +9,21 @@
       "system.json",
       "lib/miscellaneous-settings.js",
       "module/damage/applydamage.js",
-      "module/damage/damagecalculator.js"
+      "module/damage/damagecalculator.js",
+      "module/damage/damagechat.js"
+    ]
+  },
+  {
+    "directory": "layered",
+    "environment": "LAYERED_SOURCE",
+    "repository": "Farmeroz/gurps-layered-armour",
+    "commit": "7046395018ab8a982eddfef93c18a72fab56a88b",
+    "version": "0.2.2",
+    "files": [
+      "scripts/core.mjs",
+      "scripts/help.mjs",
+      "scripts/integration.mjs",
+      "scripts/tooltip-engine.mjs"
     ]
   }
 ]

@@ -1,6 +1,6 @@
 {
   "name": "gurps-manual-add",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,7 +13,8 @@
   "devDependencies": {
     "prettier": "3.9.6",
     "fflate": "0.8.2",
-    "linkedom": "0.18.13"
+    "linkedom": "0.18.13",
+    "playwright": "1.62.1"
   },
   "scripts": {
     "test:setup": "node tools/test-sources.mjs",
@@ -22,6 +23,7 @@
     "format:check": "prettier --check .",
     "check:syntax": "node tools/check-syntax.mjs",
     "build": "node tools/build-release.mjs",
-    "check": "npm run format:check && npm run check:syntax && npm test && npm run build"
+    "check": "npm run format:check && npm run check:syntax && npm test && npm run test:browser && npm run build",
+    "test:browser": "node tests/browser.mjs"
   }
 }

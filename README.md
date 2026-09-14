@@ -1,132 +1,131 @@
-# GURPS Manual Damage 0.1.3
+# GURPS Manual Damage 0.2.0
 
-Open the GURPS 4e Game Aid (GGA) Apply Damage Dialog without rolling damage first. The module uses GGA's actual calculator and damage-application code. DR, hit locations, damage types, wounding modifiers, and the other actor data and options that GGA normally uses remain available.
+Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. GURPS Layered Armour is supported when installed and enabled.
 
-Target: Foundry VTT 14 and GGA 0.18.x. Tested in live Foundry worlds with GGA 0.18.23, including `/add`, multiple recipients, and the Version 0.1.1 HUD controls. There are no additional module dependencies.
-
-## Update from 0.1.0
-
-Replace the existing `Data/modules/gurps-manual-add` folder with the `gurps-manual-add` folder in this ZIP. Restart Foundry and reload the world so it loads the new JavaScript. Confirm the installed version is **0.1.3** and **Show Manual Damage on token HUD** is enabled in module settings.
-
-Right-click a token and look for the **calculator icon**, labelled **Manual Damage**. A **Manual Damage** entry is also registered in Foundry 14's supported token context menus. These controls open the dialog for the right-clicked token. Use `/add` for all selected tokens.
-
-## Changes in 0.1.1
-
-- Adds a HUD control even when the older `.col.right` layout is absent.
-- Correctly distinguishes native HTML form elements from jQuery wrappers.
-- Handles the configured custom token HUD class and parent render hooks without duplicate controls.
-- Adds the documented Foundry 14 `getTokenPlaceableContextOptions` menu integration.
-- Rechecks permissions and resolves the right-clicked token, including token-list context rows.
+Requires Foundry VTT 14 and GURPS Game Aid (GGA) 0.18.x. No additional modules are required.
 
 ## Install or update
 
-1. From Foundry's **Setup** screen, open **Add-on Modules**.
-2. Paste `https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json` into **Manifest URL** and select **Install**.
-3. Open your GURPS world, enable **GURPS Manual Damage** in **Manage Modules**, and reload when prompted.
-
-For a manual installation, download the versioned ZIP from [GitHub Releases](https://github.com/Farmeroz/gurps-manual-add/releases) and extract its `gurps-manual-add` folder into `Data/modules/`.
-
-## Open the calculator
-
-- **Token HUD:** right-click a token and click its calculator icon, **Manual Damage**. The control appears in a separate group beside the HUD if its older right-hand column is absent. This opens the dialog for that token alone.
-- **Selected tokens:** select one or more recipient tokens and enter `/add` in chat. `/madd` is an alias.
-- **Chat macro:** create a Chat macro with `/add` as its content.
-- **OtF:** use `[/add]` or `[/add 12 cut]` in a location that supports GGA OtF links.
-
-No token selected means no application: the module prompts you to select a recipient. It does not silently substitute GGA's Last Actor or a targeted token.
-
-Examples:
+Install using this manifest URL in Foundry’s **Add-on Modules**:
 
 ```text
-/add
+https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json
+```
+
+For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
+
+## Open Manual Damage
+
+- Enter **`/add`** or **`/madd`** in chat to open the damage workbench.
+- Right-click a token and use its **Manual Damage** calculator button or supported context-menu entry. The workbench initially lists that token.
+- Use a Chat macro containing `/add`, or an OtF link such as `[/add]`.
+
+The window starts with your selected recipient tokens. **Use currently selected tokens** updates that list. Targets and GGA’s Last Actor are not substituted for selected recipients.
+
+You can open the workbench without any selected tokens and make a shared roll for chat only. Adding recipients later does not require rerolling that shared result.
+
+## Enter fixed damage
+
+Choose **Fixed number**, enter basic damage, choose its type and armour divisor, and select **Review and apply**. Basic damage is the amount before protection and wounding, not the final injury.
+
+Existing numeric commands open the ADD directly:
+
+```text
 /add 12 cut
 /add 12 cut location="Left Arm" divisor=2
-/add 8 burn divisor=0.5
 /add 3 fat
+```
+
+## Roll damage
+
+Choose **Roll damage**. Enter a compact expression, or use the dice, modifier, multiplier, damage-type, and armour-divisor fields. The expression and fields update together.
+
+```text
+3d+2 cut
+2d(2) imp
+1d-1x5 burn
+```
+
+Dice are six-sided. The modifier is added or subtracted before the multiplier; GGA handles the actual dice and minimum-damage calculation. Use a whole-number multiplier. Armour divisors may be fractional; `-1` means ignore DR. An optional hit-location name is carried into each ADD.
+
+Select **Roll damage** to show the result and record it in chat. This changes no HP, FP, armour, or actor resources. Select **Review and apply** afterwards to open the ADD queue. The chat card records the roll; application is performed through the ADD.
+
+**Roll again** starts a new damage event. Changing any damage or roll-option field discards the pending result in the workbench; existing chat records remain. If recording a result fails, **Retry: keep existing dice** records the same dice rather than rerolling them.
+
+Dice commands prepare the roller but do not roll automatically:
+
+```text
+/add roll
+/add 3d+2 cut
+/add 2d(2) imp location="Left Arm"
+/add 3d burn rolls=separate
 /add help
 ```
 
-The number is **basic damage before DR and wounding modifiers**, not injury. Dice formulas and negative damage are rejected. Damage types use GGA's abbreviations. `divisor=-1` means ignore DR, following GGA's internal convention. Location names are matched to the recipient's own hit-location list, case-insensitively; `Large-Area` is also supported.
-
-## Use the ADD
-
-The full ADD opens, even if GGA's simple-dialog setting is enabled. The initial defaults are 0 basic damage, crushing, and armour divisor 1 unless supplied in the command. Basic damage is selected for typing. This does not alter your GGA settings.
-
-The module's **Apply calculated injury and next/close** button uses GGA's current calculation, including DR and enabled wounding rules. Its result visibility follows GGA's default Apply-action setting, shown beside the button.
-
-GGA's own Apply buttons remain available, including quiet application and keep-open options. Its upper **direct Apply** button bypasses DR and the injury calculation; the module labels that button accordingly. Use the calculated-injury button for the normal damage → DR → injury workflow.
-
-Result cards are GGA's normal cards with a **Manual damage** label. There is no fabricated attacker, attack roll, damage roll, or attack-action expenditure. GGA's normal effects controls remain available; effects are not all automatically applied merely because HP or FP changes.
-
-Opening does not roll dice. If GGA's default hit location is Random, the module starts with Torso, or the first available location for a different body plan. You can explicitly use the ADD's Random button. GGA's optional Body Hits/location check is deferred until you apply calculated injury; if enabled, that check can roll dice then.
+Expressions must be complete. Actor-relative expressions such as `sw+2` or `thr`, margin references, arbitrary Foundry formulas, and fractional multipliers are not supported.
 
 ## Multiple recipients
 
-The command takes a snapshot of the selected tokens and opens one dialog at a time.
+Choose **One roll shared by all recipients** for one damage roll, or **Roll separately for each recipient** for independent totals tied to the listed tokens. Separate rolls require recipients before rolling. Refreshing their selection requires fresh separate rolls.
 
-- The first dialog's basic damage, type, armour divisor, damage modifier, and location seed subsequent recipients. A custom user-entered wounding multiplier follows its custom type too.
-- These common values are captured on the first Apply or Skip. Later edits affect only the current recipient.
-- Each recipient gets a fresh GGA calculator and their own actor data. DR overrides, explosion distance, injury-tolerance overrides, and other recipient-specific options are not copied. Review those individually.
-- A location missing from a recipient's body plan produces a warning and falls back to Torso or its first location for review.
-- **Skip** advances without damage. **Cancel remaining**, or closing the window, ends the queue; damage already applied remains applied.
-- **Apply and keep open** leaves the effects controls available. Use **Next / Finish** to continue. A completed recipient is locked against another Apply in this queue. For another attack, finish the queue and open a new one.
-- GGA's **Apply Multiple** remains available for a deliberate batch of hits; that batch finishes before advancing. If an update fails partway through, earlier successful hits remain applied and the recipient is locked against accidentally replaying them.
-- Multiple linked tokens sharing one actor are included once. Separate unlinked NPC tokens remain separate recipients and use their own synthetic actors.
+The ADD opens one recipient at a time. Each reads its own protection and injury options, including saved armour layers. Changes to a rolled result in one ADD affect that recipient only; the other recipients retain their recorded totals. In a fixed-damage queue, the first ADD’s common damage inputs seed the later dialogs.
+
+Multiple linked tokens sharing one actor count once. Unlinked NPC tokens remain separate recipients.
+
+Use **Apply calculated injury and next/close** for GGA’s normal damage calculation. The native **Apply directly (ignore DR)** option deliberately bypasses protection. **Skip** advances without applying damage. **Cancel remaining** ends the queue; damage already applied remains applied.
+
+Each rolled batch can open one application queue. Cancelling or partially completing that queue does not make the batch reusable. Roll again for a new damage event. GGA’s deliberate **Apply Multiple** option remains available inside the ADD.
+
+## Visibility and modifier bucket
+
+Choose **Public**, **GM and me**, **Blind to GM**, or **Only me** for the damage-roll chat message. Blind results are hidden from players in the workbench, and require GM review and application. The ADD controls the visibility of its injury-result messages separately.
+
+**Include numeric modifier-bucket values** is off by default. When enabled, the current numeric modifiers are copied once for the batch and included in each roll. The bucket is not cleared or changed. Costs, actions, and other effects described in its entries are not executed. Review the entries yourself before including them; this is a numeric snapshot, not an attack roll.
 
 ## Permissions and settings
 
-GGA's **Only GMs can open the ADD** setting is respected. If GGA permits players, a player can use this module only for actors they own. Permission is checked again before applying damage. Tokens without a usable actor or permission are skipped with a notice.
+Rolling alone does not require a recipient or an active GM. Applying damage respects GGA’s **Only GMs can open the ADD** setting and actor ownership. Permissions and token existence are checked again before opening and applying. GGA 0.18’s native ADD requires an active GM for damage without an attacker, so a GM must be connected for the application stage.
 
-GGA 0.18.23's native ADD constructor assumes an active GM exists for damage without an attacker. This release therefore requires a GM to be connected, including when an authorised player opens the manual ADD.
+Opening a window never rolls damage. A default Random hit location starts at Torso or the actor’s first available location. You can explicitly choose Random inside the ADD. GGA’s optional Body Hits check may roll when calculated injury is applied.
 
-Module settings:
+Module settings include:
 
-- **Enable manual damage** — world setting, default on.
-- **Show Manual Damage on token HUD** — per-user setting, default on.
+- **Enable manual damage**: world setting, on by default.
+- **Show Manual Damage on token HUD**: personal setting, on by default.
+- **Show help tooltips**: personal setting, on by default. Hover or use keyboard focus for help; Escape dismisses it. Turning help off preserves labels and essential notices.
 
-A second manual-damage queue is refused until the current one is finished or cancelled. The HUD button, chat commands, and API share these rules. Existing `/add` or `/madd` command registrations are respected; a conflicting alias is not registered.
+## JavaScript macros
 
-## JavaScript macro / API
+Open the workbench:
 
 ```js
 await game.modules.get('gurps-manual-add').api.open();
 ```
 
-Prefill and use selected tokens:
+Prepare a roll:
+
+```js
+await game.modules.get('gurps-manual-add').api.open({
+  expression: '3d+2 cut',
+  distribution: 'shared', // or 'separate'
+  hitlocation: 'Torso',
+});
+```
+
+Open fixed damage directly for selected tokens:
 
 ```js
 await game.modules.get('gurps-manual-add').api.open({
   damage: 12,
   damageType: 'cut',
-  hitlocation: 'Left Arm',
   armorDivisor: 2,
 });
 ```
 
-Use specific canvas tokens or token IDs:
-
-```js
-await game.modules.get('gurps-manual-add').api.open({
-  tokens: [canvas.tokens.get('YOUR_TOKEN_ID')],
-  damage: 8,
-  damageType: 'burn',
-});
-```
-
-Run the command parser directly:
-
-```js
-await game.modules.get('gurps-manual-add').api.command('/add 12 cut');
-```
-
-The promise resolves `true` when the queue finishes, including skipped recipients, or `false` if cancelled, rejected, or unable to open. It is not a count of actors damaged. Awaited OtF/chat command processing waits for the queue to finish.
+An optional `tokens` array accepts canvas tokens or their IDs. `api.command('/add 3d+2 cut')` uses the chat parser. Workbench calls resolve when the window is launched; numeric direct-ADD calls resolve when the queue finishes or is cancelled. Neither return value counts actors damaged.
 
 ## Support and licence
 
 Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual-add/issues). Released under the [MIT licence](LICENSE).
 
 GURPS is a trademark of Steve Jackson Games. This unofficial module is not affiliated with or endorsed by Steve Jackson Games, Foundry Gaming LLC, or the GURPS Game Aid maintainers. GGA source is not bundled.
-
-## Help tooltips
-
-Hover over a control or focus it with the keyboard for a short explanation. Press Escape to dismiss the help. Under **Configure Settings → Module Settings → GURPS Manual Damage**, turn off **Show help tooltips** to hide optional help on your client. Labels, settings descriptions, and important notices remain visible. Other users keep their own preference.

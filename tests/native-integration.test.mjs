@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { parseHTML } from 'linkedom';
 import { createManualDialogClass, RecipientSession } from '../scripts/dialog.mjs';
 import { collectRecipients } from '../scripts/core.mjs';
 const source = process.env.GGA_SOURCE;
@@ -374,5 +376,76 @@ if (!source) {
     await s.dialog.submitDirectApply(false, true);
     assert.equal(a.system.HP.value, 18);
     assert.equal(updates.length, 1);
+  });
+
+  test('rolled queue uses the original per-recipient seeds despite edits to the first ADD', async () => {
+    reset();
+    const a = actor('one', 4),
+      b = actor('two', 8);
+    const seed = {
+      damage: 12,
+      damageType: 'cut',
+      armorDivisor: 1,
+      rollInfo: '3d cut: 12 basic damage',
+    };
+    const s = new RecipientSession(Manual, [recipient(a), recipient(b)], seed, () => {}, [
+      seed,
+      seed,
+    ]);
+    s.show();
+    s.dialog._calculator.basicDamage = 5;
+    await s.dialog.submitInjuryApply({}, false, true);
+    assert.equal(s.dialog._calculator.basicDamage, 12);
+    assert.equal(s.dialog._calculator.DR, 8);
+    await s.dialog.submitInjuryApply({}, false, true);
+    assert.equal(a.system.HP.value, 29);
+    assert.equal(b.system.HP.value, 24);
+    assert.equal(rolls, 0, 'opening and applying recorded results never rerolls damage');
+  });
+
+  test('rolled separate results use current Layered Armour with per-layer Hardened and native injury', async () => {
+    reset();
+    globalThis.document = parseHTML('<html><body></body></html>').document;
+    const dir = process.env.LAYERED_SOURCE;
+    const { patchADD } = await import(pathToFileURL(path.join(dir, 'scripts/integration.mjs')));
+    const { newLayer } = await import(pathToFileURL(path.join(dir, 'scripts/core.mjs')));
+    patchADD(NativeADD, async () => {});
+    const a = actor('layered-one', 99),
+      b = actor('layered-two', 99);
+    a.getFlag = (_id, key) =>
+      key === 'profile'
+        ? {
+            schema: 1,
+            enabled: true,
+            layers: [
+              { ...newLayer(['Torso']), dr: 12, hardened: 1 },
+              { ...newLayer(['Torso']), dr: 6 },
+            ],
+          }
+        : undefined;
+    b.getFlag = (_id, key) =>
+      key === 'profile'
+        ? { schema: 1, enabled: true, layers: [{ ...newLayer(['Torso']), dr: 3 }] }
+        : undefined;
+    const seeds = [20, 10].map((damage) => ({
+      damage,
+      damageType: 'imp',
+      armorDivisor: 3,
+      hitlocation: 'Torso',
+      rollInfo: 'Separate damage roll',
+    }));
+    const s = new RecipientSession(Manual, [recipient(a), recipient(b)], seeds[0], () => {}, seeds);
+    s.show();
+    await s.dialog.getData();
+    assert.equal(s.dialog._calculator.effectiveDR, 8);
+    await s.dialog.submitInjuryApply({}, false, true);
+    await s.dialog.getData();
+    assert.equal(s.dialog._calculator.basicDamage, 10);
+    assert.equal(s.dialog._calculator.effectiveDR, 1);
+    await s.dialog.submitInjuryApply({}, false, true);
+    assert.equal(a.system.HP.value, 6);
+    assert.equal(b.system.HP.value, 12);
+    assert.equal(updates.length, 2);
+    assert.equal(rolls, 0);
   });
 }

@@ -2,12 +2,14 @@ import * as log from './log.mjs';
 import { ID, parseCommand, validateSeed, collectRecipients } from './core.mjs';
 import { createManualDialogClass, RecipientSession } from './dialog.mjs';
 import { registerHudIntegration } from './hud.mjs';
+import { createWorkbenchClass } from './workbench.mjs';
 
 let active = null,
   DialogClass = null,
+  workbench = null,
   initialising = false;
 const HELP =
-  '/add [damage] [type] [location="Left Arm"] [divisor=2]. Select recipient tokens first. Example: /add 12 cut location="Left Arm" divisor=2. /madd is an alias. No dice are rolled.';
+  '/add opens the damage workbench. /add 12 cut opens fixed damage directly; /add 3d+2 cut prepares a roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /madd is an alias. Rolling never applies injury.';
 
 function setting(key) {
   return game.settings.get(ID, key);
@@ -36,50 +38,98 @@ async function initialiseDialog() {
   DialogClass = createManualDialogClass(NativeADD);
 }
 
-export async function open(options = {}) {
-  if (active) {
-    active.dialog?.bringToTop?.();
-    ui.notifications.warn('Finish or cancel the current manual-damage queue first.');
-    return false;
+export function assertEnabled() {
+  if (!setting('enabled')) throw new Error('Manual damage is disabled in module settings.');
+  if (game.system.id !== 'gurps' || !/^0\.18\./.test(game.system.version))
+    throw new Error('Manual damage requires GGA 0.18.x.');
+}
+
+export function readRecipients(options = {}, notify = false) {
+  const supplied = options.tokens ?? (globalThis.canvas?.ready ? canvas.tokens.controlled : []);
+  const tokens = Array.from(supplied, (token) =>
+    typeof token === 'string' ? globalThis.canvas?.tokens?.get(token) : token,
+  ).filter(Boolean);
+  const { recipients, skipped, duplicates } = collectRecipients(
+    tokens,
+    game.user,
+    game.settings.get('gurps', 'only-gms-open-add'),
+  );
+  if (notify && skipped.length)
+    ui.notifications.warn(`Manual damage skipped ${skipped.length} token(s) without permission.`);
+  if (notify && duplicates.length)
+    ui.notifications.info(
+      `Manual damage: ${duplicates.length} duplicate linked token(s) omitted; each shared actor is included once.`,
+    );
+  return recipients;
+}
+
+export async function startQueue(recipients, seed, rollSeeds = null) {
+  assertEnabled();
+  if (active || initialising) {
+    active?.dialog?.bringToTop?.();
+    throw new Error('Finish or cancel the current manual-damage queue first.');
   }
-  if (initialising) return false;
+  if (!recipients.length) throw new Error('Select permitted recipient tokens first.');
+  const current = readRecipients({ tokens: recipients.map((r) => r.token) });
+  if (current.length !== recipients.length || current.some((r, i) => r.key !== recipients[i].key))
+    throw new Error('Recipient permissions or identities changed. Refresh your selection.');
+  if (
+    recipients.some(
+      (r) => r.document.parent?.tokens?.get && !r.document.parent.tokens.get(r.document.id),
+    )
+  )
+    throw new Error('A recipient token was deleted. Refresh your selection.');
   initialising = true;
   try {
-    if (!setting('enabled')) throw new Error('Manual damage is disabled in module settings.');
-    if (!canvas?.ready) throw new Error('Open a scene and select recipient tokens first.');
-    const gmOnly = game.settings.get('gurps', 'only-gms-open-add');
-    if (gmOnly && !game.user.isGM)
-      throw new Error('GGA is configured to allow only GMs to open the ADD.');
-    const seed = validateSeed(options, GURPS.DamageTables.woundModifiers);
-    const supplied = options.tokens ?? canvas.tokens.controlled;
-    const tokens = Array.from(supplied, (token) =>
-      typeof token === 'string' ? canvas.tokens.get(token) : token,
-    ).filter(Boolean);
-    if (!tokens.length) throw new Error('Select at least one recipient token first.');
-    const { recipients, skipped, duplicates } = collectRecipients(tokens, game.user, gmOnly);
-    if (skipped.length)
-      ui.notifications.warn(
-        `Manual damage skipped ${skipped.length} token(s) without an owned actor or permission.`,
-      );
-    if (duplicates.length)
-      ui.notifications.info(
-        `Manual damage: ${duplicates.length} duplicate linked token(s) omitted; each shared actor is included once.`,
-      );
-    if (!recipients.length) throw new Error('No permitted recipient actors were selected.');
     await initialiseDialog();
-    const session = new RecipientSession(DialogClass, recipients, seed, () => {
-      active = null;
-    });
+    const session = new RecipientSession(
+      DialogClass,
+      recipients,
+      seed,
+      () => {
+        active = null;
+      },
+      rollSeeds,
+    );
     active = session;
+    if (!session.show()) throw session.error ?? new Error('The ADD could not be opened.');
+    return session;
+  } finally {
     initialising = false;
-    session.show();
+  }
+}
+
+export async function open(options = {}) {
+  try {
+    assertEnabled();
+    // Existing numeric macros retain their direct-to-ADD behaviour. An empty
+    // invocation or dice expression opens an editor and never rolls on launch.
+    if (options.damage === undefined || options.expression || options.roll) {
+      if (workbench?.rendered) {
+        workbench.bringToTop();
+        if (options.expression || options.roll)
+          ui.notifications.info(
+            'The existing damage workbench is still open. Edit it or close it before preparing a different command.',
+          );
+        return true;
+      }
+      const Workbench = createWorkbenchClass();
+      workbench = new Workbench(options, {
+        assertEnabled,
+        initialRecipients: readRecipients(options, true),
+        readRecipients: () => readRecipients({}, true),
+        startQueue,
+      });
+      workbench.render(true);
+      return true;
+    }
+    const seed = validateSeed(options, GURPS.DamageTables.woundModifiers);
+    const session = await startQueue(readRecipients(options, true), seed);
     return await session.completion;
   } catch (error) {
     log.error(error);
     ui.notifications.error(`Manual damage: ${error.message}`);
     return false;
-  } finally {
-    initialising = false;
   }
 }
 
@@ -100,7 +150,7 @@ export async function command(line) {
 Hooks.once('init', () => {
   game.settings.register(ID, 'enabled', {
     name: 'Enable manual damage',
-    hint: 'Allow opening GGA’s full ADD without a damage roll. GGA’s ADD permissions still apply.',
+    hint: 'Allow fixed damage and damage rolls, with a separate ADD review. GGA’s application permissions still apply.',
     scope: 'world',
     config: true,
     type: Boolean,
@@ -140,9 +190,7 @@ Hooks.once('ready', () => {
         aliases.some((alias) => new RegExp(`^/${alias}(?:\\s|$)`, 'i').test(line.trim())),
       usagematches: () => false,
       help: () =>
-        aliases.length
-          ? `/${aliases[0]} [damage] [type] – open Manual Damage for selected tokens`
-          : null,
+        aliases.length ? `/${aliases[0]} [damage or dice] [type] – open Manual Damage` : null,
       isGMOnly: () => false,
       process: (line) => command(line),
     };

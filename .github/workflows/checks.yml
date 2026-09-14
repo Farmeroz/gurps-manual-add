@@ -23,12 +23,16 @@ jobs:
         run: npm ci
       - name: Prepare test sources
         run: npm run test:setup
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
       - name: Check formatting
         run: npm run format:check
       - name: Check syntax
         run: npm run check:syntax
       - name: Run automated suite
         run: npm test
+      - name: Run browser suite
+        run: npm run test:browser
       - name: Build and verify clean package
         run: npm run build
       - name: Attach verified package
