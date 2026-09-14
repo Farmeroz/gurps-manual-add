@@ -1,7 +1,7 @@
 import * as log from './log.mjs';
 import { ID, canUse, commonValues, locationFor } from './core.mjs';
 
-const rootOf = (element) => element?.[0] ?? element;
+const rootOf = (element) => (element?.nodeType ? element : element?.[0]);
 
 /** Extend only our own dialog. GGA still constructs the calculator, reads DR,
  * calculates injury, updates the actor, and creates its usual result cards. */
@@ -32,6 +32,7 @@ export function createManualDialogClass(NativeADD) {
           classes: [...NativeADD.defaultOptions.classes, ID],
         },
       );
+      this.rollInfo = seed.rollInfo;
       this.session = session;
       this.recipient = recipient;
       this.isSimpleDialog = false;
@@ -89,6 +90,12 @@ export function createManualDialogClass(NativeADD) {
         ? 'Applied. You can use the normal effect controls, then move to the next recipient.'
         : `Recipient ${this.session.index + 1} of ${this.session.recipients.length}: ${this.recipient.name}. Enter basic damage; calculated injury uses this actor’s DR and ADD options.`;
       panel.append(description);
+      if (this.rollInfo) {
+        const roll = document.createElement('p');
+        roll.className = 'manual-roll-origin';
+        roll.textContent = this.rollInfo + ' Changes in this ADD affect this recipient only.';
+        panel.append(roll);
+      }
       const controls = document.createElement('div');
       controls.className = 'manual-add-controls';
       const apply = document.createElement('button');
@@ -125,11 +132,22 @@ export function createManualDialogClass(NativeADD) {
         void this.close();
       });
       controls.append(apply, next, cancel, privacy);
+      const roller = document.createElement('button');
+      roller.type = 'button';
+      roller.dataset.action = 'openRoller';
+      roller.textContent = 'Roll damage…';
+      roller.disabled = this._busy || this._applied;
+      roller.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.openRoller();
+      });
+      controls.prepend(roller);
       panel.append(controls);
       if (this.session.recipients.length > 1) {
         const note = document.createElement('small');
         note.textContent =
-          this.session.index === 0
+          this.session.index === 0 && !this.session.rollSeeds
             ? 'The basic damage, type, divisor, modifier, and location entered for this first recipient seed the remaining dialogs. Each recipient’s DR and other options are loaded afresh.'
             : 'Changes here affect this recipient only. Review location, distance, and other options before applying.';
         panel.append(note);
@@ -151,6 +169,23 @@ export function createManualDialogClass(NativeADD) {
         const input = root.querySelector('#basicDamage');
         input?.focus();
         input?.select();
+      }
+    }
+
+    openRoller() {
+      if (this._busy || this._applied || this._advancing) return false;
+      try {
+        this.assertPermission();
+        this.readBasicDamage();
+        if (this.roller?.rendered) {
+          this.roller.bringToTop?.();
+          return true;
+        }
+        this.roller = this.session.openRoller(this);
+        return true;
+      } catch (error) {
+        ui.notifications.error(`Manual damage: ${error.message}`);
+        return false;
       }
     }
 
@@ -273,13 +308,17 @@ export function createManualDialogClass(NativeADD) {
 }
 
 export class RecipientSession {
-  constructor(DialogClass, recipients, seed, onFinish) {
+  constructor(DialogClass, recipients, seed, onFinish, rollSeeds = null) {
+    if (rollSeeds && rollSeeds.length !== recipients.length)
+      throw new Error('Each recipient needs exactly one damage seed.');
+    this.rollSeeds = rollSeeds?.map((item) => ({ ...item }));
     this.DialogClass = DialogClass;
     this.recipients = recipients;
     this.seed = seed;
     this.index = 0;
     this.done = false;
     this.captured = false;
+    this.rollRevision = 0;
     this.onFinish = onFinish;
     this.completion = new Promise((resolve) => {
       this.resolve = resolve;
@@ -287,21 +326,91 @@ export class RecipientSession {
   }
 
   capture(calculator) {
-    if (!this.captured) {
+    if (!this.captured && !this.rollSeeds) {
       this.seed = commonValues(calculator);
       this.captured = true;
     }
   }
 
+  rollTarget(dialog) {
+    const index = this.index;
+    const revision = this.rollRevision;
+    const recipients = this.recipients.slice(index);
+    const assertCurrent = () => {
+      if (
+        this.done ||
+        this.index !== index ||
+        this.dialog !== dialog ||
+        this.rollRevision !== revision ||
+        dialog._busy ||
+        dialog._applied ||
+        dialog._advancing
+      )
+        throw new Error(
+          'This ADD has changed or finished. Open Roll damage from the current unapplied recipient.',
+        );
+      dialog.assertPermission();
+    };
+    assertCurrent();
+    return {
+      recipients,
+      assertCurrent,
+      accept: (seeds) => {
+        assertCurrent();
+        if (!seeds || seeds.length !== recipients.length)
+          throw new Error('Each remaining recipient needs one recorded roll.');
+        for (const seed of seeds) {
+          if (
+            !Number.isSafeInteger(seed.damage) ||
+            seed.damage < 0 ||
+            !Number.isFinite(seed.armorDivisor) ||
+            (seed.armorDivisor <= 0 && seed.armorDivisor !== -1) ||
+            !Object.hasOwn(GURPS.DamageTables.woundModifiers, seed.damageType)
+          )
+            throw new Error('A recorded damage result is invalid.');
+        }
+        const calc = dialog._calculator;
+        const future = this.recipients.map((_recipient, i) => ({
+          ...(this.rollSeeds?.[i] ?? (this.captured ? this.seed : commonValues(calc))),
+        }));
+        seeds.forEach((seed, offset) => {
+          // Only replace the attack's damage, type and divisor. Existing
+          // location/modifier seeds and the live calculator stay intact.
+          Object.assign(future[index + offset], {
+            damage: seed.damage,
+            damageType: seed.damageType,
+            armorDivisor: seed.armorDivisor,
+            rollInfo: seed.rollInfo,
+          });
+        });
+        calc.damageType = seeds[0].damageType;
+        calc.armorDivisor = seeds[0].armorDivisor;
+        calc.basicDamage = seeds[0].damage;
+        dialog.rollInfo = seeds[0].rollInfo;
+        this.rollSeeds = future;
+        this.captured = true;
+        this.rollRevision++;
+        dialog.render(false);
+        dialog.bringToTop?.();
+        return this;
+      },
+    };
+  }
+
   show() {
-    if (this.done) return;
+    if (this.done) return false;
     try {
-      this.dialog = new this.DialogClass(this, this.recipients[this.index], { ...this.seed });
+      this.dialog = new this.DialogClass(this, this.recipients[this.index], {
+        ...(this.rollSeeds?.[this.index] ?? this.seed),
+      });
       this.dialog.render(true, { height: 'auto' });
+      return true;
     } catch (error) {
+      this.error = error;
       log.error('Open failed', error);
       ui.notifications.error(`Manual damage: ${error.message}`);
       this.finish(false);
+      return false;
     }
   }
 

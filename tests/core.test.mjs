@@ -20,7 +20,6 @@ test('empty and prefilled commands, quoted locations, and aliases', () => {
 
 test('invalid damage, dice, types, options and quotes are rejected', () => {
   for (const command of [
-    '/add 2d cut',
     '/add -3 cr',
     '/add 1.5 cr',
     '/add 4 huh',

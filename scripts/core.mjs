@@ -27,16 +27,28 @@ export function parseCommand(line) {
   if (quote) throw new Error('Close the quotation marks around the location.');
   if (started) words.push(word);
   if (words.length === 1 && /^(?:help|--help|\?)$/i.test(words[0])) return { help: true };
+  if (words.length === 1 && words[0].toLowerCase() === 'roll') return { roll: true };
   const result = {};
   if (words.length && !words[0].includes('=')) result.damage = words.shift();
   if (words.length && !words[0].includes('=')) result.damageType = words.shift();
   for (const entry of words) {
-    const match = /^(location|divisor)=(.+)$/i.exec(entry);
-    if (!match) throw new Error('Use /add [damage] [type] [location="Left Arm"] [divisor=2].');
-    const key = match[1].toLowerCase() === 'location' ? 'hitlocation' : 'armorDivisor';
+    const match = /^(location|divisor|rolls)=(.+)$/i.exec(entry);
+    if (!match)
+      throw new Error(
+        'Use /add [damage or dice] [type] [location="Left Arm"] [divisor=2] [rolls=shared|separate].',
+      );
+    const key = { location: 'hitlocation', divisor: 'armorDivisor', rolls: 'distribution' }[
+      match[1].toLowerCase()
+    ];
     if (key in result) throw new Error(`Specify ${match[1]} only once.`);
     result[key] = match[2];
   }
+  if (result.distribution && !['shared', 'separate'].includes(result.distribution))
+    throw new Error('Use rolls=shared or rolls=separate.');
+  if (result.damage && /d/i.test(result.damage)) {
+    result.expression = result.damage;
+    delete result.damage;
+  } else if (result.distribution) throw new Error('The rolls option requires a dice expression.');
   return result;
 }
 
