@@ -73,7 +73,7 @@ export function createHudIntegration(launch) {
       return;
     menuItems.push({
       name: 'Manual Damage',
-      icon: '<i class="fa-solid fa-calculator"></i>',
+      icon: '<i class="fa-solid fa-calculator manual-add-menu-icon"></i>',
       manualDamageEntry: true,
       condition: (target) => permitted(tokenFor(application, target)),
       callback: (target) => {
