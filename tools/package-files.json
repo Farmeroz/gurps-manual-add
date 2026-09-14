@@ -4,8 +4,10 @@
   "module.json",
   "scripts/core.mjs",
   "scripts/dialog.mjs",
+  "scripts/help.mjs",
   "scripts/hud.mjs",
   "scripts/log.mjs",
   "scripts/main.mjs",
+  "scripts/tooltip-engine.mjs",
   "styles/manual-add.css"
 ]

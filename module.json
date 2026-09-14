@@ -2,7 +2,7 @@
   "id": "gurps-manual-add",
   "title": "GURPS Manual Damage",
   "description": "Open GGA's full Apply Damage Dialog for selected tokens without a damage roll. Includes HUD, chat/OtF, and sequential recipient review.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "authors": [
     {
       "name": "Phil Brown",
@@ -24,11 +24,11 @@
       }
     ]
   },
-  "esmodules": ["scripts/main.mjs"],
+  "esmodules": ["scripts/main.mjs", "scripts/help.mjs"],
   "styles": ["styles/manual-add.css"],
   "url": "https://github.com/Farmeroz/gurps-manual-add",
   "manifest": "https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json",
-  "download": "https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.1.2/gurps-manual-add-v0.1.2.zip",
+  "download": "https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.1.3/gurps-manual-add-v0.1.3.zip",
   "readme": "README.md",
   "license": "LICENSE"
 }

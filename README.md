@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.1.2
+# GURPS Manual Damage 0.1.3
 
 Open the GURPS 4e Game Aid (GGA) Apply Damage Dialog without rolling damage first. The module uses GGA's actual calculator and damage-application code. DR, hit locations, damage types, wounding modifiers, and the other actor data and options that GGA normally uses remain available.
 
@@ -6,9 +6,9 @@ Target: Foundry VTT 14 and GGA 0.18.x. Tested in live Foundry worlds with GGA 0.
 
 ## Update from 0.1.0
 
-Replace the existing `Data/modules/gurps-manual-add` folder with the `gurps-manual-add` folder in this ZIP. Restart Foundry and reload the world so it loads the new JavaScript. Confirm the installed version is **0.1.2** and **Show Manual Damage on token HUD** is enabled in module settings.
+Replace the existing `Data/modules/gurps-manual-add` folder with the `gurps-manual-add` folder in this ZIP. Restart Foundry and reload the world so it loads the new JavaScript. Confirm the installed version is **0.1.3** and **Show Manual Damage on token HUD** is enabled in module settings.
 
-Right-click a token and look for the **calculator icon**, with the tooltip **Manual Damage**. A **Manual Damage** entry is also registered in Foundry 14's supported token context menus. These controls open the dialog for the right-clicked token. Use `/add` for all selected tokens.
+Right-click a token and look for the **calculator icon**, labelled **Manual Damage**. A **Manual Damage** entry is also registered in Foundry 14's supported token context menus. These controls open the dialog for the right-clicked token. Use `/add` for all selected tokens.
 
 ## Changes in 0.1.1
 
@@ -126,3 +126,7 @@ The promise resolves `true` when the queue finishes, including skipped recipient
 Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual-add/issues). Released under the [MIT licence](LICENSE).
 
 GURPS is a trademark of Steve Jackson Games. This unofficial module is not affiliated with or endorsed by Steve Jackson Games, Foundry Gaming LLC, or the GURPS Game Aid maintainers. GGA source is not bundled.
+
+## Help tooltips
+
+Hover over a control or focus it with the keyboard for a short explanation. Press Escape to dismiss the help. Under **Configure Settings → Module Settings → GURPS Manual Damage**, turn off **Show help tooltips** to hide optional help on your client. Labels, settings descriptions, and important notices remain visible. Other users keep their own preference.
