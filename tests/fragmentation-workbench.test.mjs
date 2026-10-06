@@ -133,6 +133,7 @@ test('direct hit guarantees exactly one fragment hit and still randomises locati
   totals.splice(0, totals.length, 15);
   const f = setup();
   f.app.rows.one.directHit = true;
+  f.app.rows.one.distance = '999';
   assert.equal(await f.app.resolveFragments(), true);
   assert.equal(f.app.events.length, 1);
   assert.equal(f.app.events[0].seed.hitlocation, 'Vitals');
