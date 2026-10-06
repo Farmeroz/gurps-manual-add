@@ -119,6 +119,47 @@ test('fragment helper is inert until resolve is chosen', () => {
   assert.equal(f.app.element.querySelector('[data-action="reviewFragments"]').disabled, true);
 });
 
+test('input edits preserve rolled values until confirmed; reroll also requires discard', async () => {
+  const f = setup();
+  totals.splice(0, totals.length, 14, 9);
+  await f.app.resolveFragments();
+  const events = f.app.events;
+  const input = f.app.element.querySelector('[data-frag-field="distance"]');
+  input.value = '5';
+  input.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  assert.equal(f.app.pendingDiscard, 'edit');
+  assert.equal(input.value, '1');
+  assert.equal(f.app.events, events);
+  f.app.element.querySelector('[data-action="keepFragments"]').click();
+  assert.equal(f.app.rows.one.distance, '1');
+  input.value = '5';
+  input.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  f.app.element.querySelector('[data-action="discardFragments"]').click();
+  assert.equal(f.app.rows.one.distance, '5');
+  assert.equal(f.app.events, null);
+  totals.splice(0, totals.length, 13, 9);
+  await f.app.resolveFragments();
+  const rerollEvents = f.app.events;
+  assert.equal(await f.app.resolveFragments(), false);
+  assert.equal(f.app.pendingDiscard, 'reroll');
+  assert.equal(f.app.events, rerollEvents);
+  f.app.element.querySelector('[data-action="keepFragments"]').click();
+  assert.equal(f.app.events, rerollEvents);
+});
+
+test('replacing an ADD requires explicit acknowledgement that blast damage is separate', async () => {
+  const f = setup(undefined, { replacesQueue: true });
+  totals.splice(0, totals.length, 14, 9);
+  await f.app.resolveFragments();
+  assert.equal(await f.app.reviewFragments(), false);
+  assert.equal(f.started(), null);
+  const ack = f.app.element.querySelector('[data-blast-ack]');
+  ack.checked = true;
+  ack.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  assert.equal(f.app.events.length, 1);
+  assert.equal(await f.app.reviewFragments(), true);
+});
+
 test('B415 attack roll creates multiple random-location fragment events', async () => {
   totals.splice(0, totals.length, 11, 8, 12);
   const f = setup();

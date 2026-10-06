@@ -127,6 +127,8 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       this.originChosen = false;
       this.pendingDiscard = null;
       this.discardApproved = false;
+      this.pendingEdit = null;
+      this.blastAcknowledged = !this.services.replacesQueue;
     }
 
     resetDistances() {
@@ -176,6 +178,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         .join('');
       return `<form class="manual-fragmentation-form" autocomplete="off">
         <p>GURPS 4e fragmentation (B415): <strong>1. Resolve fragments. 2. Review hits in ADD. 3. Apply injury in each ADD.</strong> Resolving only rolls the hits; it does not transfer or apply them. Closing before review discards the pending hits from this helper; the chat record remains.</p>
+        <p><strong>Blast damage is separate.</strong> This helper handles fragments only. Apply any explosion damage separately in the normal ADD; it is not included in these hits.</p>
         <div class="manual-roll-grid">
           <label>Fragment damage<input data-field="expression" value="2d cut" spellcheck="false"></label>
           <label>Airburst<input data-field="airburst" type="checkbox"></label>
@@ -186,7 +189,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         <button type="button" data-action="resetDistances">Reset centre &amp; distances</button>
         <small>Reset clears the centre, all distance overrides, Direct hit ticks and pending results. Then enter 0 or tick Direct hit on the new centre to recalculate. Damage, posture and visibility settings are kept.</small>
         <small>The first zero-distance or Direct hit recipient suggests the centre. Estimates use token centres and elevations on a scene measured in yards, feet or metres. Manually edited distances are preserved. Review all distances; airbursts and unavailable scene measurements require manual entry. Zero distance alone does not grant a direct hit.</small>
-        ${this.services.replacesQueue ? '<p>Review hits in ADD will replace the current unapplied damage queue with these fragment hits.</p>' : ''}
+        ${this.services.replacesQueue ? '<p>Review hits in ADD replaces the current unapplied damage queue. To apply that damage first, close this helper, finish the original ADD queue, then reopen Fragmentation through /add.</p><label><input type="checkbox" data-blast-ack> I understand: replace the current queue with fragments only; its pending blast/basic damage will not be applied.</label>' : ''}
         <table class="manual-fragment-table"><thead><tr><th>Recipient</th><th>Distance (yd)</th><th>Posture</th><th>Direct hit</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
@@ -206,6 +209,26 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       root.addEventListener('submit', (event) => event.preventDefault());
       root.addEventListener('input', (event) => {
         if (this.busy || this.handedOff || this.pendingDiscard) return;
+        if (event.target.matches('[data-blast-ack]')) {
+          this.blastAcknowledged = event.target.checked;
+          this.refresh(root);
+          return;
+        }
+        if (this.events?.length) {
+          // Restore the rolled inputs until the user explicitly accepts this edit.
+          const target = event.target;
+          const value = target.type === 'checkbox' ? target.checked : target.value;
+          this.pendingEdit = () => {
+            if (target.type === 'checkbox') target.checked = value;
+            else target.value = value;
+            target.dispatchEvent(
+              new target.ownerDocument.defaultView.Event('input', { bubbles: true }),
+            );
+          };
+          this.pendingDiscard = 'edit';
+          this.refresh(root);
+          return;
+        }
         if (event.target.matches('[data-origin]')) {
           this.originKey = event.target.value;
           this.originChosen = true;
@@ -249,6 +272,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         else if (action === 'resetDistances') this.resetDistances();
         else if (action === 'keepFragments') {
           this.pendingDiscard = null;
+          this.pendingEdit = null;
           this.refresh(root);
           root.querySelector('[data-action="reviewFragments"]').focus();
         } else if (action === 'discardFragments' && this.pendingDiscard) {
@@ -256,7 +280,16 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           this.pendingDiscard = null;
           this.discardApproved = true;
           if (pending === 'reset') this.resetDistances();
-          else void this.close();
+          else if (pending === 'edit' || pending === 'reroll') {
+            const edit = this.pendingEdit;
+            this.pendingEdit = null;
+            this.events = null;
+            this.summary = [];
+            this.rolls = [];
+            this.discardApproved = false;
+            if (pending === 'edit') edit?.();
+            else void this.resolveFragments();
+          } else void this.close();
         } else if (action === 'resolveFragments') void this.resolveFragments();
         else if (action === 'reviewFragments') void this.reviewFragments();
       });
@@ -271,6 +304,8 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         else node.value = this.draft[node.dataset.field];
       }
       root.querySelector('[data-origin]').value = this.originKey;
+      const blastAck = root.querySelector('[data-blast-ack]');
+      if (blastAck) blastAck.checked = this.blastAcknowledged;
       root.querySelectorAll('input, select, button').forEach((node) => {
         if (['close', 'keepFragments', 'discardFragments'].includes(node.dataset.action))
           node.disabled = this.busy;
@@ -297,13 +332,19 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           : '';
       root.querySelector('.manual-discard-warning').hidden = !this.pendingDiscard;
       root.querySelector('[data-action="discardFragments"]').textContent =
-        this.pendingDiscard === 'reset'
-          ? 'Discard hits and reset distances'
-          : 'Discard hits and close';
+        {
+          reset: 'Discard hits and reset distances',
+          edit: 'Discard hits and change input',
+          reroll: 'Discard hits and roll again',
+          close: 'Discard hits and close',
+        }[this.pendingDiscard] ?? 'Discard hits';
       root.querySelector('.manual-workbench-error').textContent = this.error;
       const review = root.querySelector('[data-action="reviewFragments"]');
       review.disabled =
-        locked || !this.events?.length || (this.draft.visibility === 'blind' && !game.user.isGM);
+        locked ||
+        !this.events?.length ||
+        !this.blastAcknowledged ||
+        (this.draft.visibility === 'blind' && !game.user.isGM);
       root.querySelector('[data-action="resolveFragments"]').textContent = this.busy
         ? 'Working…'
         : this.events
@@ -322,6 +363,11 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
 
     async resolveFragments() {
       if (this.busy || this.handedOff || this.pendingDiscard) return false;
+      if (this.events?.length) {
+        this.pendingDiscard = 'reroll';
+        this.refresh();
+        return false;
+      }
       this.busy = true;
       this.error = '';
       this.events = null;
@@ -426,6 +472,12 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
 
     async reviewFragments() {
       if (this.busy || this.handedOff || this.pendingDiscard || !this.events?.length) return false;
+      if (!this.blastAcknowledged) {
+        this.error =
+          'Confirm that the current queue will be replaced with fragments only. Blast damage must be applied separately.';
+        this.refresh();
+        return false;
+      }
       this.busy = true;
       this.error = '';
       this.refresh();

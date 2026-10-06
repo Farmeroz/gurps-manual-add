@@ -33,10 +33,25 @@ Use /add and the token HUD on one and several tokens. Enter damage, change locat
 
 For the new roller, try `/add 2d+1 cut`, roll, and confirm that no resources change until an ADD Apply button is used. Check shared versus separate results on two unlinked NPCs. Repeat with saved armour layers enabled. Check Roll only with no selection, a negative modifier with a multiplier, numeric bucket opt-in, roll visibility from both player and GM clients, and cancellation after a partial queue. Test that a roll cannot be sent to another queue without explicitly rolling again.
 
-For fragmentation, select one or more tokens and choose **Fragmentation…** from the standalone workbench. Check an ordinary target at several distances, a direct hit, prone/kneeling posture, an airburst, multiple fragment hits, and a case where the random location is behind cover and must be skipped. Confirm each actual hit opens its own ADD with its rolled location and that an Ablative Layered Armour tracker depletes only when that fragment's injury is applied.
+For fragmentation, select one or more tokens and choose **Fragmentation…** from `/add` → **Attack options** (or the standalone workbench). Check an ordinary target at several distances, a direct hit, prone/kneeling posture, an airburst, multiple fragment hits, and a case where the random location is behind cover and must be skipped. Confirm each actual hit opens its own ADD with its rolled location and that an Ablative Layered Armour tracker depletes only when that fragment's injury is applied.
 
 Use your normal Foundry/GGA versions and module combination, and refresh connected clients after updating. Record unexpected notifications, visibility changes, or changed resource totals, together with the module versions and steps to reproduce them.
 
 ## Package verification
 
 The build checks module/package versions, install URLs, declared assets, local imports, the allowed archive file list, and every archived file's bytes. The release ZIP contains only runtime files, the licence, and user documentation.
+
+## Final candidate live checks (not verified by automated CI)
+
+Use the release candidates together in your normal Foundry world with one GM and one connected player. Record the Foundry, GGA and module versions and each result.
+
+- Open ordinary /add, expand Attack options, and confirm Fragmentation, Large-Area, Explosion and the explained Chinks control are discoverable.
+- Apply explosion damage separately before fragment review. Confirm the replacement acknowledgement cannot accidentally apply the original basic/blast damage.
+- Resolve fragments, try changing damage, range, centre, posture and visibility, and try Roll again. Keep hits must preserve results and original inputs; confirm discard must clear them. Test Close and window X too.
+- Reset centre & distances; nominate a different zero-range or Direct hit recipient. Confirm distances recalculate and prior overrides/direct-hit ticks clear.
+- Send multiple fragments into Ablative/Semi-Ablative armour. Confirm trackers and HP change only for applied hits, and later hits use the remaining protection.
+- Skip a fragment whose rolled location is behind cover. Cancel midway through a multi-hit queue. Applied hits must remain applied; skipped and remaining hits must not change HP or armour.
+- With the player connected, test ownership/GM-only permissions and public, GM, self and blind visibility. Blind results must remain hidden from players; this helper does not automatically transfer a player's pending queue to another client's GM. Use GM-led review for blind fragmentation.
+- Reload the world and confirm armour configuration and remaining tracker values persist.
+
+Passing automated tests does not establish these connected-world results. Record any failure before promoting to stable.

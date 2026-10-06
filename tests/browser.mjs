@@ -315,6 +315,21 @@ try {
   await page.locator('[data-action="resolveFragments"]').click();
   await page.waitForFunction(() => frag.events?.length === 3);
   assert.equal(await page.locator('.manual-workbench-error').textContent(), '');
+  await page.locator('[data-recipient="Two"] [data-frag-field="distance"]').fill('9');
+  assert.equal(await page.locator('.manual-discard-warning').isVisible(), true);
+  assert.equal(
+    await page.locator('[data-recipient="Two"] [data-frag-field="distance"]').inputValue(),
+    '3',
+  );
+  await page.locator('[data-action="keepFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events.length), 3);
+  await page.locator('[data-action="resolveFragments"]').click();
+  assert.equal(
+    await page.locator('[data-action="discardFragments"]').textContent(),
+    'Discard hits and roll again',
+  );
+  await page.locator('[data-action="discardFragments"]').click();
+  await page.waitForFunction(() => frag.events?.length === 3 && !frag.busy);
   assert.deepEqual(errors, []);
   await page.screenshot({
     path: path.join(root, 'test-output/fragmentation-preview.png'),

@@ -80,6 +80,10 @@ Use **Reset centre & distances** to clear the previous centre, all distance over
 
 **Resolve fragments only rolls the hits. You must click Review hits in ADD, then apply injury in each ADD.** Closing the helper before review does not transfer or apply anything. Both Close and the window close control warn when hits are pending: keep them to return to review, or explicitly discard them. The chat record remains, but it does not automatically restore the pending queue. No warning is needed if no fragments hit or the hits have already been handed to ADD.
 
+Editing an input or choosing **Roll again** also requires confirmation before discarding pending hits. Keeping hits restores the original rolled inputs; confirming an edit clears the old results and applies that edit.
+
+**Explosion blast damage is separate from fragmentation.** When opened from an ADD, the helper requires acknowledgement before replacing its current unapplied queue with fragment hits. To apply blast damage first, close the helper, finish the original ADD queue, then reopen Fragmentation through `/add`. Fragment review does not apply the pending blast damage for you.
+
 The helper follows B415:
 
 - maximum fragment radius is five yards per die of fragmentation damage;
