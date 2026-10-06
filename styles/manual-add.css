@@ -151,3 +151,51 @@
   cursor: pointer;
   pointer-events: auto;
 }
+
+.manual-fragmentation-form {
+  display: grid;
+  gap: 12px;
+  padding: 6px;
+  color: #28251f;
+}
+.manual-fragmentation-workbench .window-content {
+  background: #f4efe6;
+  color: #28251f;
+  overflow-y: auto;
+}
+.manual-fragmentation-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+.manual-fragmentation-form input,
+.manual-fragmentation-form select,
+.manual-fragmentation-form button {
+  box-sizing: border-box;
+  min-width: 0;
+  background: #fffdf8;
+  color: #28251f;
+  border: 1px solid #857963;
+  border-radius: 4px;
+  min-height: 32px;
+  padding: 4px 8px;
+  width: 100%;
+}
+.manual-fragmentation-form input[type='checkbox'] {
+  width: 18px;
+  min-height: 18px;
+}
+.manual-fragment-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.manual-fragment-table th,
+.manual-fragment-table td {
+  padding: 5px;
+  vertical-align: middle;
+}
+.manual-fragment-table small {
+  display: block;
+  font-weight: normal;
+}
