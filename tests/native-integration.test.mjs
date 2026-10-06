@@ -561,9 +561,7 @@ if (!source) {
       allLocations: true,
     };
     a.getFlag = (_id, key) =>
-      key === 'profile'
-        ? { schema: 1, enabled: true, layers: [armour] }
-        : undefined;
+      key === 'profile' ? { schema: 1, enabled: true, layers: [armour] } : undefined;
     a.system.additionalresources.tracker['0000'] = {
       name: 'Armour: Ablative Sleeve',
       alias: 'DR',
@@ -592,5 +590,4 @@ if (!source) {
     assert.equal(a.system.additionalresources.tracker['0000'].value, 0);
     assert.match(messages[0].content, /Ablative Sleeve|armour|Armour/);
   });
-
 }
