@@ -4,9 +4,9 @@ Start with the setup commands in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Automated coverage
 
-Existing tests cover manual damage parsing, recipient selection, token HUD and chat invocation, multiple recipients, failure handling, and the native GGA damage calculator and application dialogue. Foundry documents and UI are mocked.
+Tests cover manual damage parsing, recipient selection, token HUD and chat invocation, multiple recipients, failure handling, the native GGA damage calculator/application dialogue, and the B415 fragmentation helper. Fragmentation cases cover range, skill-15 attacks, normal success-roll limits, posture, Size Modifier, airbursts, direct hits, multiple fragment hits, random locations, cutting damage with AD 1, blind-result privacy, and repeated hits on one recipient. Foundry documents and UI are mocked.
 
-The roller tests use GGA’s real damage parser and roll-building methods with deterministic dice. They cover minimum damage, multiplier order, separate/shared totals, numeric bucket snapshots, chat retry, blind-result privacy, and single-use batches. Application tests exercise the current Layered Armour integration, including per-layer Hardened and per-recipient DR.
+The roller tests use GGA’s real damage parser and roll-building methods with deterministic dice. They cover minimum damage, multiplier order, separate/shared totals, numeric bucket snapshots, chat retry, blind-result privacy, and single-use batches. Application tests exercise the current Layered Armour integration, including per-layer Hardened, per-recipient DR, and an end-to-end fragment hit that depletes an Ablative Resource Tracker.
 
 Run `npx playwright install chromium` once, then `npm run test:browser` for the workbench’s Chromium checks. `GCS_CHROMIUM_EXECUTABLE` can point to an existing Chromium executable. The browser suite covers field synchronisation, separate rolls, the explicit ADD hand-off, blind-player output, optional keyboard help, and small-window layout. Its Foundry application and document services are mocked.
 
@@ -15,7 +15,7 @@ The suite exercises these behaviours but does not claim complete coverage or rep
 ## Source fixtures
 
 - `crnormand/gurps` 0.18.23, commit `4fb95f7ed8e114993c65ef77dc912a7b77957b02`, cached in `.cache/gga/`; optional installed-source override: `GGA_SOURCE`.
-- `Farmeroz/gurps-layered-armour` 0.2.2, commit `7046395018ab8a982eddfef93c18a72fab56a88b`, cached in `.cache/layered/`; optional installed-source override: `LAYERED_SOURCE`.
+- `Farmeroz/gurps-layered-armour` 0.3.0 candidate, pinned by `tools/test-sources.json`, cached in `.cache/layered/`; optional installed-source override: `LAYERED_SOURCE`.
 
 `npm run test:setup` downloads only the listed files from fixed revisions, records their hashes, and leaves them under the ignored `.cache/` directory. The test runner checks the revision and hashes before use. Run setup again if the cache is missing or changed. The cache is excluded from git and all user releases. An explicit source override is read directly; quote paths containing spaces. No installed source or world is modified.
 
@@ -32,6 +32,8 @@ Use a disposable unlinked NPC token with **30 current HP, DR 4 at Torso**, and n
 Use /add and the token HUD on one and several tokens. Enter damage, change location/divisor, and apply it. Also test it together with the Armour Layers candidate.
 
 For the new roller, try `/add 2d+1 cut`, roll, and confirm that no resources change until an ADD Apply button is used. Check shared versus separate results on two unlinked NPCs. Repeat with saved armour layers enabled. Check Roll only with no selection, a negative modifier with a multiplier, numeric bucket opt-in, roll visibility from both player and GM clients, and cancellation after a partial queue. Test that a roll cannot be sent to another queue without explicitly rolling again.
+
+For fragmentation, select one or more tokens and choose **Fragmentation…** from the standalone workbench. Check an ordinary target at several distances, a direct hit, prone/kneeling posture, an airburst, multiple fragment hits, and a case where the random location is behind cover and must be skipped. Confirm each actual hit opens its own ADD with its rolled location and that an Ablative Layered Armour tracker depletes only when that fragment's injury is applied.
 
 Use your normal Foundry/GGA versions and module combination, and refresh connected clients after updating. Record unexpected notifications, visibility changes, or changed resource totals, together with the module versions and steps to reproduce them.
 
