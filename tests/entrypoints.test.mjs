@@ -84,7 +84,7 @@ globalThis.canvas = {
   ready: true,
   tokens: { controlled: [token], get: (id) => (id === 't' ? token : undefined) },
 };
-const { open, command, startQueue, readRecipients } = await import('../scripts/main.mjs');
+const { open, command, startQueue, startEventQueue, readRecipients } = await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 test('empty command and HUD-style token options open the ADD without an intermediate screen', async () => {
@@ -176,4 +176,38 @@ test('world disabled blocks both the roller and fixed-damage entrypoints', async
   assert.equal(await open({ damage: 4 }), false);
   assert.equal(windows.length, before);
   settings.set('enabled', true);
+});
+
+
+test('fragment event queue can review multiple hits on the same recipient and keeps audit text', async () => {
+  const recipient = readRecipients()[0];
+  const session = await startEventQueue([
+    {
+      recipient,
+      seed: {
+        damage: 6,
+        damageType: 'cut',
+        armorDivisor: 1,
+        hitlocation: 'Torso',
+        rollInfo: 'Fragment 1 audit',
+      },
+    },
+    {
+      recipient,
+      seed: {
+        damage: 9,
+        damageType: 'cut',
+        armorDivisor: 1,
+        hitlocation: 'Torso',
+        rollInfo: 'Fragment 2 audit',
+      },
+    },
+  ]);
+  assert.equal(session.dialog._calculator.basicDamage, 6);
+  assert.equal(session.dialog.rollInfo, 'Fragment 1 audit');
+  session.next();
+  assert.equal(session.dialog._calculator.basicDamage, 9);
+  assert.equal(session.dialog.rollInfo, 'Fragment 2 audit');
+  session.finish(true);
+  assert.equal(await session.completion, true);
 });
