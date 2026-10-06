@@ -1,6 +1,6 @@
-# GURPS Manual Damage 0.2.1
+# GURPS Manual Damage 0.3.0
 
-Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. GURPS Layered Armour is supported when installed and enabled.
+Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. A separate GURPS 4e fragmentation helper resolves B415 fragment hits without cluttering ordinary damage entry. GURPS Layered Armour is supported when installed and enabled.
 
 Requires Foundry VTT 14 and GURPS Game Aid (GGA) 0.18.x. No additional modules are required.
 
@@ -22,7 +22,7 @@ For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Dat
 
 The ADD starts with your selected recipient tokens. Targets and GGA’s Last Actor are not substituted for selected recipients. Inside the ADD, **Roll damage…** opens the optional roller for the current and remaining recipients.
 
-Use `/add roll` or a dice command to open the standalone roller, including without selected tokens. Its **Use currently selected tokens** button updates the list. You can make a shared roll for chat only and add recipients later without rerolling.
+Use `/add roll` or a dice command to open the standalone roller, including without selected tokens. Its **Use currently selected tokens** button updates the list. You can make a shared roll for chat only and add recipients later without rerolling. The standalone workbench also offers **Fragmentation…** when recipients are selected; the normal ADD and attached roller stay uncluttered.
 
 ## Enter fixed damage
 
@@ -65,6 +65,28 @@ Dice commands prepare the roller but do not roll automatically:
 ```
 
 Expressions must be complete. Actor-relative expressions such as `sw+2` or `thr`, margin references, arbitrary Foundry formulas, and fractional multipliers are not supported.
+
+## Fragmentation
+
+Choose **Fragmentation…** from the standalone Manual Damage workbench to resolve the fragmentation rules on Basic Set: Campaigns, p. 415. This is a separate helper so ordinary fixed damage and damage rolling do not acquire controls that most attacks do not need.
+
+Enter the listed fragmentation damage, such as `2d cut`. For each selected recipient, enter distance from the blast, choose posture, and tick **Direct hit** if the explosive attack actually struck that target. **Airburst** is a single global option.
+
+The helper follows B415:
+
+- maximum fragment radius is five yards per die of fragmentation damage;
+- a directly struck target receives one automatic fragment hit;
+- otherwise fragments attack at skill 15 using only range, posture, and Size Modifier;
+- each full three points of margin of success adds one further fragment hit;
+- airbursts ignore posture modifiers;
+- every actual fragment hit rolls hit location randomly;
+- fragmentation is cutting damage and does **not** inherit the explosive attack’s armour divisor.
+
+The helper rolls and records the fragment attacks, locations, and damage first. Nothing is applied yet. Choose **Review hits in ADD** to send each actual fragment hit through the ordinary GGA ADD one at a time. That means normal hit-location effects, Injury Tolerance, Layered Armour, Hardened, Ablative/Semi-Ablative condition, crippling, shock, and other ADD rules continue to operate in their normal places.
+
+B415 also says that if a randomly rolled location is behind cover, the fragment hits the cover instead. The helper cannot infer arbitrary scene cover reliably, so the fragment’s ADD carries an explicit reminder; choose **Skip** for that hit after adjudicating the cover.
+
+When **Direct hit** is selected, distance is irrelevant and its input is disabled. When **Airburst** is selected, posture is irrelevant and the posture controls are disabled. Blind fragmentation results remain hidden from non-GMs and require GM review.
 
 ## Multiple recipients
 
@@ -122,6 +144,12 @@ await game.modules.get('gurps-manual-add').api.open({
   damageType: 'cut',
   armorDivisor: 2,
 });
+```
+
+Open the fragmentation helper for selected tokens:
+
+```js
+await game.modules.get('gurps-manual-add').api.openFragmentation();
 ```
 
 An optional `tokens` array accepts canvas tokens or their IDs. `api.command('/add 3d+2 cut')` uses the chat parser. Explicit roller calls resolve when the window is launched; empty and numeric ADD calls resolve when the queue finishes or is cancelled. Neither return value counts actors damaged.
