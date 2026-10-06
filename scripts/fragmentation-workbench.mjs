@@ -105,7 +105,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
         <footer class="manual-workbench-actions"><button type="button" data-action="resolveFragments">Resolve fragments</button><button type="button" data-action="reviewFragments">Review hits in ADD</button><button type="button" data-action="close">Close</button></footer>
-        <small>Direct hit guarantees one fragment hit.  Otherwise fragments attack at skill 15 with only range, posture, and SM modifiers.  Each hit rolls location randomly.</small>
+        <small>Direct hit guarantees one fragment hit and ignores distance for the fragment attack.  Otherwise fragments attack at skill 15 with only range, posture, and SM modifiers.  Each hit rolls location randomly.  If that location is behind cover, B415 says the fragment hits the cover instead; Skip that ADD hit.</small>
       </form>`;
     }
 
@@ -214,7 +214,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           const posture = POSTURES.find(([value]) => value === row.posture)?.[2] ?? 0;
           const target = fragmentAttackTarget({
             dice: spec.dice,
-            distance,
+            distance: row.directHit ? 0 : distance,
             postureModifier: posture,
             sizeModifier: actorSizeModifier(recipient.actor),
             airburst: this.draft.airburst,
@@ -254,7 +254,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
               seed: fragmentSeed(
                 damage.damage,
                 location,
-                `Fragment ${i + 1}/${hits}: ${spec.expression}; random location ${locRoll.total} → ${location}.`,
+                `Fragment ${i + 1}/${hits}: ${spec.expression}; random location ${locRoll.total} → ${location}. If that location is behind cover, B415 says the fragment hits the cover; Skip this ADD hit.`,
               ),
             });
             details.push(`${damage.damage} cut to ${location}`);
