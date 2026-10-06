@@ -544,4 +544,53 @@ if (!source) {
     assert.equal(updates.length, 2);
     assert.equal(rolls, 0);
   });
+  test('fragment hit flows through Layered Armour and commits ablative condition', async () => {
+    reset();
+    globalThis.document = parseHTML('<html><body></body></html>').document;
+    const dir = process.env.LAYERED_SOURCE;
+    const { patchADD } = await import(pathToFileURL(path.join(dir, 'scripts/integration.mjs')));
+    const { newLayer } = await import(pathToFileURL(path.join(dir, 'scripts/core.mjs')));
+    patchADD(NativeADD, async () => {});
+    const a = actor('fragment-layered', 99);
+    const armour = {
+      ...newLayer(['Left Arm']),
+      name: 'Ablative Sleeve',
+      dr: 6,
+      depletion: 'ablative',
+      resourceId: 'sleeve',
+      allLocations: true,
+    };
+    a.getFlag = (_id, key) =>
+      key === 'profile'
+        ? { schema: 1, enabled: true, layers: [armour] }
+        : undefined;
+    a.system.additionalresources.tracker['0000'] = {
+      name: 'Armour: Ablative Sleeve',
+      alias: 'DR',
+      value: 6,
+      max: 6,
+      min: 0,
+      isDamageTracker: false,
+      gla: { kind: 'armour', resourceId: 'sleeve', depletion: 'ablative', version: 1 },
+    };
+    const seed = {
+      damage: 8,
+      damageType: 'cut',
+      armorDivisor: 1,
+      hitlocation: 'Left Arm',
+      rollInfo: 'Fragment: random location 8 → Left Arm.',
+    };
+    const s = new RecipientSession(Manual, [recipient(a)], seed, () => {}, [seed]);
+    s.show();
+    await s.dialog.getData();
+    assert.equal(s.dialog._calculator.hitLocation, 'Left Arm');
+    assert.equal(s.dialog._calculator.effectiveDR, 6);
+    assert.equal(s.dialog._calculator.penetratingDamage, 2);
+    assert.equal(s.dialog._calculator.pointsToApply, 3);
+    await s.dialog.submitInjuryApply({}, false, true);
+    assert.equal(a.system.HP.value, 27);
+    assert.equal(a.system.additionalresources.tracker['0000'].value, 0);
+    assert.match(messages[0].content, /Ablative Sleeve|armour|Armour/);
+  });
+
 }
