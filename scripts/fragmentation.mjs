@@ -27,12 +27,14 @@ export function fragmentAttackTarget({
 }) {
   const maximum = fragmentRange(dice);
   const yards = Number(distance);
-  if (!Number.isFinite(yards) || yards < 0) throw new Error('Fragment distance must be zero or more.');
+  if (!Number.isFinite(yards) || yards < 0)
+    throw new Error('Fragment distance must be zero or more.');
   if (yards > maximum) return { inRange: false, maximum, target: null, rangeModifier: null };
   if (typeof rangeModifier !== 'function')
     throw new Error('A GURPS range-modifier service is required for fragmentation.');
   const range = Number(rangeModifier(Math.max(1, yards)));
-  if (!Number.isFinite(range)) throw new Error('Could not determine the fragmentation range modifier.');
+  if (!Number.isFinite(range))
+    throw new Error('Could not determine the fragmentation range modifier.');
   const posture = airburst ? 0 : Number(postureModifier);
   const sm = Number(sizeModifier);
   if (!Number.isFinite(posture) || !Number.isFinite(sm))
@@ -65,7 +67,9 @@ export function randomHitLocation(actor, roll) {
   const entries = actor?.hitLocationsWithDR ?? [];
   const match = entries.find((entry) => Array.isArray(entry.roll) && entry.roll.includes(total));
   if (!match?.where)
-    throw new Error(`${actor?.name ?? 'Recipient'} has no random hit location for a roll of ${total}.`);
+    throw new Error(
+      `${actor?.name ?? 'Recipient'} has no random hit location for a roll of ${total}.`,
+    );
   return match.where;
 }
 
