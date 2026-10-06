@@ -121,8 +121,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         if (this.busy || this.handedOff) return;
         const field = event.target.closest('[data-field]');
         if (field) {
-          this.draft[field.dataset.field] =
-            field.type === 'checkbox' ? field.checked : field.value;
+          this.draft[field.dataset.field] = field.type === 'checkbox' ? field.checked : field.value;
           this.events = null;
           this.summary = [];
           this.rolls = [];
@@ -131,8 +130,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         const frag = event.target.closest('[data-frag-field]');
         if (row && frag) {
           const state = this.rows[row.dataset.recipient];
-          state[frag.dataset.fragField] =
-            frag.type === 'checkbox' ? frag.checked : frag.value;
+          state[frag.dataset.fragField] = frag.type === 'checkbox' ? frag.checked : frag.value;
           this.events = null;
           this.summary = [];
           this.rolls = [];
@@ -203,7 +201,9 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           GURPS.DamageTables.woundModifiers,
         );
         if (spec.damageType !== 'cut' || spec.armorDivisor !== 1)
-          throw new Error('Fragmentation damage is cutting and does not inherit an armour divisor.');
+          throw new Error(
+            'Fragmentation damage is cutting and does not inherit an armour divisor.',
+          );
         const roller = await this.services.roller();
         const events = [],
           summary = [],
