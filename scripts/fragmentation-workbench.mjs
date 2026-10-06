@@ -159,12 +159,18 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         else node.disabled = locked;
       });
       const output = root.querySelector('.manual-roll-results');
-      output.innerHTML = this.summary.length
-        ? `<ul>${this.summary.map((line) => `<li>${escapeHTML(line)}</li>`).join('')}</ul><p>${this.events?.length ? `${this.events.length} fragment hit(s) ready for ADD review.` : 'No fragment hits.'}</p>`
-        : '';
+      const blind = this.draft.visibility === 'blind' && !game.user.isGM;
+      output.innerHTML = blind
+        ? this.summary.length
+          ? '<p>Blind fragmentation result: details are visible to the GM in chat.</p>'
+          : ''
+        : this.summary.length
+          ? `<ul>${this.summary.map((line) => `<li>${escapeHTML(line)}</li>`).join('')}</ul><p>${this.events?.length ? `${this.events.length} fragment hit(s) ready for ADD review.` : 'No fragment hits.'}</p>`
+          : '';
       root.querySelector('.manual-workbench-error').textContent = this.error;
       const review = root.querySelector('[data-action="reviewFragments"]');
-      review.disabled = locked || !this.events?.length;
+      review.disabled =
+        locked || !this.events?.length || (this.draft.visibility === 'blind' && !game.user.isGM);
       root.querySelector('[data-action="resolveFragments"]').textContent = this.busy
         ? 'Working…'
         : this.events
