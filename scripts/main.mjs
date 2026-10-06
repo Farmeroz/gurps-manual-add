@@ -208,10 +208,12 @@ export async function openFragmentation(options = {}) {
       startEvents: options.startEvents ?? startEventQueue,
       replacesQueue: Boolean(options.replacesQueue),
     });
+    const currentFragmentation = fragmentation;
     const originalClose = fragmentation.close.bind(fragmentation);
     fragmentation.close = async (...args) => {
       const result = await originalClose(...args);
-      fragmentation = null;
+      if (!currentFragmentation.rendered && fragmentation === currentFragmentation)
+        fragmentation = null;
       return result;
     };
     fragmentation.render(true);

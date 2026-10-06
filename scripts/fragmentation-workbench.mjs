@@ -125,6 +125,31 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       this.handedOff = false;
       this.originKey = '';
       this.originChosen = false;
+      this.pendingDiscard = null;
+      this.discardApproved = false;
+    }
+
+    resetDistances() {
+      if (this.busy || this.handedOff) return;
+      if (this.events?.length && !this.discardApproved) {
+        this.pendingDiscard = 'reset';
+        this.refresh();
+        return;
+      }
+      this.originKey = '';
+      this.originChosen = false;
+      for (const row of Object.values(this.rows)) {
+        row.distance = '1';
+        row.distanceEdited = false;
+        row.directHit = false;
+      }
+      this.events = null;
+      this.summary = [];
+      this.rolls = [];
+      this.error = '';
+      this.pendingDiscard = null;
+      this.discardApproved = false;
+      this.refresh();
     }
 
     estimateDistances() {
@@ -150,7 +175,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         })
         .join('');
       return `<form class="manual-fragmentation-form" autocomplete="off">
-        <p>Resolve GURPS 4e fragmentation (B415).  This helper determines fragment hits and random hit locations, then sends each actual hit to the normal ADD.</p>
+        <p>GURPS 4e fragmentation (B415): <strong>1. Resolve fragments. 2. Review hits in ADD. 3. Apply injury in each ADD.</strong> Resolving only rolls the hits; it does not transfer or apply them. Closing before review discards the pending hits from this helper; the chat record remains.</p>
         <div class="manual-roll-grid">
           <label>Fragment damage<input data-field="expression" value="2d cut" spellcheck="false"></label>
           <label>Airburst<input data-field="airburst" type="checkbox"></label>
@@ -158,11 +183,14 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         </div>
         <small>Fragmentation is cutting damage with no inherited armour divisor.  Danger radius is 5 yards per damage die.  Airbursts ignore posture modifiers.</small>
         <label>Blast centre for distance estimates<select data-origin><option value="">Manual distances</option>${this.recipients.map((r) => `<option value="${escapeHTML(r.key)}">${escapeHTML(r.name)}</option>`).join('')}</select></label>
+        <button type="button" data-action="resetDistances">Reset centre &amp; distances</button>
+        <small>Reset clears the centre, all distance overrides, Direct hit ticks and pending results. Then enter 0 or tick Direct hit on the new centre to recalculate. Damage, posture and visibility settings are kept.</small>
         <small>The first zero-distance or Direct hit recipient suggests the centre. Estimates use token centres and elevations on a scene measured in yards, feet or metres. Manually edited distances are preserved. Review all distances; airbursts and unavailable scene measurements require manual entry. Zero distance alone does not grant a direct hit.</small>
         ${this.services.replacesQueue ? '<p>Review hits in ADD will replace the current unapplied damage queue with these fragment hits.</p>' : ''}
         <table class="manual-fragment-table"><thead><tr><th>Recipient</th><th>Distance (yd)</th><th>Posture</th><th>Direct hit</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
+        <section class="manual-discard-warning" role="alert" hidden><p>These fragment hits have not been sent to ADD. Continuing discards the pending hits without applying injury. The chat record remains, but it will not transfer automatically.</p><button type="button" data-action="keepFragments">Keep hits — return to review</button><button type="button" data-action="discardFragments">Discard hits and close</button></section>
         <footer class="manual-workbench-actions"><button type="button" data-action="resolveFragments">Resolve fragments</button><button type="button" data-action="reviewFragments">Review hits in ADD</button><button type="button" data-action="close">Close</button></footer>
         <small>Direct hit guarantees one fragment hit and ignores distance for the fragment attack.  Otherwise fragments attack at skill 15 with only range, posture, and SM modifiers.  Each hit rolls location randomly.  If that location is behind cover, B415 says the fragment hits the cover instead; Skip that ADD hit.</small>
       </form>`;
@@ -177,7 +205,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       const root = rootOf(html);
       root.addEventListener('submit', (event) => event.preventDefault());
       root.addEventListener('input', (event) => {
-        if (this.busy || this.handedOff) return;
+        if (this.busy || this.handedOff || this.pendingDiscard) return;
         if (event.target.matches('[data-origin]')) {
           this.originKey = event.target.value;
           this.originChosen = true;
@@ -218,7 +246,18 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         if (!action) return;
         event.preventDefault();
         if (action === 'close') void this.close();
-        else if (action === 'resolveFragments') void this.resolveFragments();
+        else if (action === 'resetDistances') this.resetDistances();
+        else if (action === 'keepFragments') {
+          this.pendingDiscard = null;
+          this.refresh(root);
+          root.querySelector('[data-action="reviewFragments"]').focus();
+        } else if (action === 'discardFragments' && this.pendingDiscard) {
+          const pending = this.pendingDiscard;
+          this.pendingDiscard = null;
+          this.discardApproved = true;
+          if (pending === 'reset') this.resetDistances();
+          else void this.close();
+        } else if (action === 'resolveFragments') void this.resolveFragments();
         else if (action === 'reviewFragments') void this.reviewFragments();
       });
       this.refresh(root);
@@ -226,14 +265,15 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
 
     refresh(root = rootOf(this.element)) {
       if (!root) return;
-      const locked = this.busy || this.handedOff;
+      const locked = this.busy || this.handedOff || Boolean(this.pendingDiscard);
       for (const node of root.querySelectorAll('[data-field]')) {
         if (node.type === 'checkbox') node.checked = Boolean(this.draft[node.dataset.field]);
         else node.value = this.draft[node.dataset.field];
       }
       root.querySelector('[data-origin]').value = this.originKey;
       root.querySelectorAll('input, select, button').forEach((node) => {
-        if (node.dataset.action === 'close') node.disabled = this.busy;
+        if (['close', 'keepFragments', 'discardFragments'].includes(node.dataset.action))
+          node.disabled = this.busy;
         else node.disabled = locked;
       });
       for (const row of root.querySelectorAll('[data-recipient]')) {
@@ -253,8 +293,13 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           ? '<p>Blind fragmentation result: details are visible to the GM in chat.</p>'
           : ''
         : this.summary.length
-          ? `<ul>${this.summary.map((line) => `<li>${escapeHTML(line)}</li>`).join('')}</ul><p>${this.events?.length ? `${this.events.length} fragment hit(s) ready for ADD review.` : 'No fragment hits.'}</p>`
+          ? `<ul>${this.summary.map((line) => `<li>${escapeHTML(line)}</li>`).join('')}</ul><p>${this.events?.length ? (this.handedOff ? 'Fragment hits sent to ADD for review.' : `${this.events.length} fragment hit(s) pending. Next: click Review hits in ADD. No injury has been applied.`) : 'No fragment hits.'}</p>`
           : '';
+      root.querySelector('.manual-discard-warning').hidden = !this.pendingDiscard;
+      root.querySelector('[data-action="discardFragments"]').textContent =
+        this.pendingDiscard === 'reset'
+          ? 'Discard hits and reset distances'
+          : 'Discard hits and close';
       root.querySelector('.manual-workbench-error').textContent = this.error;
       const review = root.querySelector('[data-action="reviewFragments"]');
       review.disabled =
@@ -276,7 +321,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
     }
 
     async resolveFragments() {
-      if (this.busy || this.handedOff) return false;
+      if (this.busy || this.handedOff || this.pendingDiscard) return false;
       this.busy = true;
       this.error = '';
       this.events = null;
@@ -380,7 +425,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
     }
 
     async reviewFragments() {
-      if (this.busy || this.handedOff || !this.events?.length) return false;
+      if (this.busy || this.handedOff || this.pendingDiscard || !this.events?.length) return false;
       this.busy = true;
       this.error = '';
       this.refresh();
@@ -400,6 +445,12 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
 
     async close(options) {
       if (this.busy) return this;
+      if (this.events?.length && !this.handedOff && !this.discardApproved) {
+        this.pendingDiscard = 'close';
+        this.refresh();
+        rootOf(this.element)?.querySelector('[data-action="keepFragments"]')?.focus();
+        return this;
+      }
       return super.close(options);
     }
   };

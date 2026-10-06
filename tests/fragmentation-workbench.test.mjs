@@ -243,3 +243,73 @@ test('direct-hit entry suggests centre without changing other direct-hit flags',
   assert.equal(f.app.rows.a.directHit, false);
   assert.equal(f.app.rows.a.distance, '1');
 });
+
+test('closing pending hits warns, keep preserves them, discard closes; misses need no warning', async () => {
+  const f = setup();
+  totals.splice(0, totals.length, 14, 9);
+  await f.app.resolveFragments();
+  const events = f.app.events;
+  await f.app.close();
+  assert.equal(f.app.closed, undefined);
+  assert.equal(f.app.pendingDiscard, 'close');
+  assert.equal(f.app.element.querySelector('.manual-discard-warning').hidden, false);
+  f.app.element.querySelector('[data-action="keepFragments"]').click();
+  assert.equal(f.app.events, events);
+  assert.equal(f.app.pendingDiscard, null);
+  await f.app.close();
+  f.app.element.querySelector('[data-action="discardFragments"]').click();
+  assert.equal(f.app.closed, true);
+  const misses = setup();
+  misses.app.events = [];
+  await misses.app.close();
+  assert.equal(misses.app.closed, true);
+  assert.equal(misses.app.pendingDiscard, null);
+});
+
+test('reset clears overrides and direct hits so a new zero-range centre recalculates', () => {
+  const recipients = ['a', 'b'].map((key, i) => ({
+    ...recipient(key, key),
+    document: { parent: { id: 's' } },
+    token: { center: { x: i * 4, y: 0 } },
+  }));
+  globalThis.canvas = {
+    ready: true,
+    scene: { id: 's', grid: { units: 'yards' } },
+    grid: { measurePath: ([a, b]) => ({ euclidean: Math.abs(b.x - a.x) }) },
+  };
+  const f = setup(recipients);
+  f.app.originKey = 'a';
+  f.app.originChosen = true;
+  f.app.rows.a.directHit = true;
+  f.app.rows.b.distanceEdited = true;
+  f.app.rows.b.distance = '99';
+  f.app.rows.b.posture = 'kneeling';
+  f.app.resetDistances();
+  assert.equal(f.app.rows.a.directHit, false);
+  assert.equal(f.app.rows.b.distanceEdited, false);
+  assert.equal(f.app.rows.b.posture, 'kneeling');
+  const input = f.app.element.querySelector('[data-recipient="b"] [data-frag-field="distance"]');
+  input.value = '0';
+  input.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  assert.equal(f.app.originKey, 'b');
+  assert.equal(f.app.rows.a.distance, '4');
+  delete globalThis.canvas;
+});
+
+test('reset warns before discarding pending hits and handed-off results close without warning', async () => {
+  const f = setup();
+  f.app.events = [{}];
+  f.app.originKey = 'one';
+  f.app.resetDistances();
+  assert.equal(f.app.pendingDiscard, 'reset');
+  assert.equal(f.app.originKey, 'one');
+  f.app.element.querySelector('[data-action="discardFragments"]').click();
+  assert.equal(f.app.originKey, '');
+  assert.equal(f.app.events, null);
+  assert.equal(f.app.closed, undefined);
+  f.app.events = [{}];
+  f.app.handedOff = true;
+  await f.app.close();
+  assert.equal(f.app.closed, true);
+  assert.equal(f.app.pendingDiscard, null);
+});

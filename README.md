@@ -76,6 +76,10 @@ Enter the listed fragmentation damage, such as `2d cut`. For each selected recip
 
 The first recipient entered at distance zero or marked Direct hit suggests the blast centre. You can change the centre using its dropdown. For tokens on the active scene, the helper estimates straight-line distances between token centres, including token elevation, converting scene yards, feet or metres into yards. Previously edited distances are preserved; every estimate can be overridden. Airbursts, unknown units and unavailable token measurements require manual distances. Zero range does not itself mark a direct hit. Measurement uses Foundry's [grid measurement API](https://foundryvtt.com/api/v14/interfaces/foundry.grid.types.GridMeasurePathResult.html).
 
+Use **Reset centre & distances** to clear the previous centre, all distance overrides and Direct hit ticks, then enter zero or tick Direct hit on the new centre. Damage, posture, airburst and visibility settings are retained. Reset also clears pending results and warns before discarding unreviewed hits.
+
+**Resolve fragments only rolls the hits. You must click Review hits in ADD, then apply injury in each ADD.** Closing the helper before review does not transfer or apply anything. Both Close and the window close control warn when hits are pending: keep them to return to review, or explicitly discard them. The chat record remains, but it does not automatically restore the pending queue. No warning is needed if no fragments hit or the hits have already been handed to ADD.
+
 The helper follows B415:
 
 - maximum fragment radius is five yards per die of fragmentation damage;

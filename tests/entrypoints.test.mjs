@@ -84,9 +84,23 @@ globalThis.canvas = {
   ready: true,
   tokens: { controlled: [token], get: (id) => (id === 't' ? token : undefined) },
 };
-const { open, command, startQueue, startEventQueue, readRecipients } =
+const { open, command, startQueue, startEventQueue, readRecipients, openFragmentation } =
   await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test('declining fragmentation close keeps the registered helper and pending hits', async () => {
+  const helper = await openFragmentation();
+  helper.events = [{}];
+  await helper.close();
+  assert.equal(helper.rendered, true);
+  assert.equal(await openFragmentation(), helper);
+  assert.equal(helper.events.length, 1);
+  helper.discardApproved = true;
+  await helper.close();
+  const replacement = await openFragmentation();
+  assert.notEqual(replacement, helper);
+  await replacement.close();
+});
 
 test('empty command and HUD-style token options open the ADD without an intermediate screen', async () => {
   const before = windows.length;

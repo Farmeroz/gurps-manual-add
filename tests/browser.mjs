@@ -323,6 +323,27 @@ try {
   console.log(
     'PASS: multiple fragmentation recipients, explicit d6 rolls, automatic distances and manual overrides',
   );
+  await page.locator('[data-action="close"]').click();
+  assert.equal(await page.locator('.manual-discard-warning').isVisible(), true);
+  assert.equal(await page.locator('[data-action="reviewFragments"]').isDisabled(), true);
+  await page.locator('[data-action="keepFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events.length), 3);
+  assert.equal(await page.locator('[data-action="reviewFragments"]').isDisabled(), false);
+  await page.locator('[data-action="resetDistances"]').click();
+  assert.equal(
+    await page.locator('[data-action="discardFragments"]').textContent(),
+    'Discard hits and reset distances',
+  );
+  await page.locator('[data-action="discardFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events), null);
+  await page.locator('[data-recipient="Three"] [data-frag-field="distance"]').fill('0');
+  assert.equal(await page.locator('[data-origin]').inputValue(), 'Three');
+  assert.equal(
+    await page.locator('[data-recipient="One"] [data-frag-field="distance"]').inputValue(),
+    '6',
+  );
+  assert.deepEqual(errors, []);
+  console.log('PASS: close warning preserves pending hits; confirmed reset allows a new centre');
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));
