@@ -43,6 +43,14 @@ Use `/add roll` or a dice command to open the standalone roller, including witho
 
 ## Enter fixed damage
 
+### Incomplete NPCs without hit locations
+
+The ADD opens in **temporary manual review** when the actor has no hit-location table. Enter **Reviewed DR for this recipient** (including 0 if unprotected), then apply calculated injury. The preview uses provisional DR 0 until you enter a value; calculated application is blocked until then. Alternatively, **Apply directly (ignore DR)** deliberately subtracts the entered damage without protection or calculated wounding.
+
+The sheet is unchanged. No anatomy, location multipliers, random body location or crippling location is assumed. Layered protection and armour degradation are bypassed in this mode; review DR and injury modifiers yourself. If Layered Armour is enabled, use its matching 0.3.1 test build. Each recipient starts with its own unfilled DR field. Fragment hits against an actor without locations use this same manual review instead of inventing a body plan.
+
+If the ADD cannot finish opening, the roller retains its results for retry rather than marking them as transferred. This does not restore hits already applied in a partially completed queue.
+
 Enter basic damage, its type, and armour divisor directly in the ADD. Basic damage is the amount before protection and wounding, not the final injury.
 
 Existing numeric commands open the ADD directly:

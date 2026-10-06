@@ -1,5 +1,5 @@
 import * as log from './log.mjs';
-import { ID, parseCommand, validateSeed, collectRecipients } from './core.mjs';
+import { ID, parseCommand, validateSeed, collectRecipients, locationFor } from './core.mjs';
 import { createManualDialogClass, RecipientSession } from './dialog.mjs';
 import { registerHudIntegration } from './hud.mjs';
 import { createWorkbenchClass } from './workbench.mjs';
@@ -81,6 +81,9 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
     )
   )
     throw new Error('A recipient token was deleted. Refresh your selection.');
+  // Validate every recipient before a queue can consume a recorded batch.
+  for (const [index, recipient] of recipients.entries())
+    locationFor(recipient.actor, (rollSeeds?.[index] ?? seed).hitlocation);
   initialising = true;
   try {
     await initialiseDialog();
@@ -134,6 +137,7 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
       return roller;
     };
     if (!session.show()) throw session.error ?? new Error('The ADD could not be opened.');
+    if (session.dialog.ready) await session.dialog.ready;
     return session;
   } finally {
     initialising = false;
@@ -185,6 +189,7 @@ export async function startEventQueue(events) {
     );
     active = session;
     if (!session.show()) throw session.error ?? new Error('The ADD could not be opened.');
+    if (session.dialog.ready) await session.dialog.ready;
     return session;
   } finally {
     initialising = false;

@@ -260,6 +260,26 @@ try {
   assert.equal(await page.evaluate(() => fragmentOpened), true);
   assert.deepEqual(errors, []);
   console.log('PASS: plain ADD exposes attack options and fragmentation without initial damage');
+  await page.evaluate(() => {
+    const r = { ...manual.recipient, actor: { ...manual.actor, hitLocationsWithDR: [] } };
+    manual = new manual.constructor(manual.session, r, {
+      damage: 9,
+      damageType: 'cr',
+      armorDivisor: 1,
+    });
+    const host = document.querySelector('.window-content');
+    host.innerHTML = '<div class="gga-app"></div>';
+    manual.element = host;
+    manual.activateListeners(host);
+  });
+  assert.equal(await page.locator('[data-manual-dr]').inputValue(), '');
+  await page.locator('[data-manual-dr]').fill('4');
+  await page.locator('[data-manual-dr]').blur();
+  assert.equal(await page.evaluate(() => manual.manualDR), '4');
+  assert.equal(await page.evaluate(() => manual.actor.hitLocationsWithDR.length), 0);
+  console.log(
+    'PASS: incomplete NPC opens with blank explicit DR and leaves actor locations unchanged',
+  );
 
   await page.evaluate(async () => {
     const { createFragmentationWorkbenchClass } =

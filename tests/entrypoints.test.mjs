@@ -88,6 +88,56 @@ const { open, command, startQueue, startEventQueue, readRecipients, openFragment
   await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+test('ADD readiness reports asynchronous opening failures instead of successful hand-off', async () => {
+  const { createManualDialogClass } = await import('../scripts/dialog.mjs');
+  class RenderingNative extends Native {
+    async _render() {
+      throw new Error('Template failed');
+    }
+  }
+  const Manual = createManualDialogClass(RenderingNative);
+  let finished = false;
+  const recipient = readRecipients()[0];
+  const d = new Manual(
+    {
+      index: 0,
+      recipients: [recipient],
+      finish: () => {
+        finished = true;
+      },
+    },
+    recipient,
+    { damage: 9, damageType: 'cr', armorDivisor: 1 },
+  );
+  const rejected = assert.rejects(d.ready, /Template failed/);
+  await d._render(true);
+  await rejected;
+  assert.equal(finished, true);
+});
+
+test('missing locations in a later recipient open temporary review without losing the queue', async () => {
+  const missing = {
+    ...token,
+    actor: {
+      ...token.actor,
+      id: 'missing',
+      uuid: 'Actor.missing',
+      name: 'Missing',
+      hitLocationsWithDR: [],
+    },
+    document: { ...token.document, id: 'missing', uuid: 'Scene.s.Token.missing' },
+  };
+  const recipients = readRecipients({ tokens: [token, missing] });
+  const count = dialogs.length;
+  const session = await startQueue(recipients, { damage: 9, damageType: 'cr', armorDivisor: 1 });
+  assert.equal(dialogs.length, count + 1);
+  session.next();
+  assert.equal(session.dialog.manualLocation, true);
+  assert.equal(session.dialog._calculator.basicDamage, 9);
+  assert.equal(session.dialog._calculator.hitLocation, 'User Entered');
+  session.finish(false);
+});
+
 test('declining fragmentation close keeps the registered helper and pending hits', async () => {
   const helper = await openFragmentation();
   helper.events = [{}];
