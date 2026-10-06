@@ -6,7 +6,7 @@ import {
   fragmentSeed,
   randomHitLocation,
 } from './fragmentation.mjs';
-import { escapeHTML, nativeDamageRoller, parseExpression } from './rolls.mjs';
+import { defaultVisibility, escapeHTML, nativeDamageRoller, parseExpression } from './rolls.mjs';
 
 const rootOf = (element) => (element?.nodeType ? element : element?.[0]);
 const POSTURES = [
@@ -63,7 +63,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         dice: '2',
         modifier: '0',
         airburst: false,
-        visibility: 'public',
+        visibility: defaultVisibility(),
       };
       this.rows = Object.fromEntries(
         this.recipients.map((recipient) => [
@@ -156,6 +156,13 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         if (node.dataset.action === 'close') node.disabled = this.busy;
         else node.disabled = locked;
       });
+      for (const row of root.querySelectorAll('[data-recipient]')) {
+        const state = this.rows[row.dataset.recipient];
+        const distance = row.querySelector('[data-frag-field="distance"]');
+        const posture = row.querySelector('[data-frag-field="posture"]');
+        if (distance) distance.disabled = locked || Boolean(state?.directHit);
+        if (posture) posture.disabled = locked || Boolean(this.draft.airburst);
+      }
       const output = root.querySelector('.manual-roll-results');
       const blind = this.draft.visibility === 'blind' && !game.user.isGM;
       output.innerHTML = blind
