@@ -4,6 +4,19 @@ Enter fixed damage or roll damage dice, then review and apply the result with GG
 
 Requires Foundry VTT 14 and GURPS Game Aid (GGA) 0.18.x. No additional modules are required.
 
+## Quick start for players and GMs
+
+1. Select the recipient token(s), then enter **`/add`**. Use selected tokens, not just targeted tokens.
+2. Enter basic damage and its type, or choose **Roll damage…** and then **Use rolled damage** to return the roll to the ADD.
+3. Check the recipient, hit location, DR, divisor and calculated injury. Open **Attack options** for fragmentation, large-area or explosion damage. Chinks and layered exposure controls require GURPS Layered Armour.
+4. Choose **Apply calculated injury and next/close**. **Skip** changes nothing for that recipient. **Cancel remaining** leaves already-applied injury in place.
+
+**Apply directly (ignore DR)** bypasses armour. Use calculated injury for ordinary damage resolution.
+
+### What is new in 0.3.0?
+
+The GURPS 4e fragmentation helper rolls fragment attacks, locations and damage, then sends each hit to ADD for review. It includes blast-centre distance estimates, manual overrides, a centre/distance reset, and warnings before discarding pending hits. Ordinary `/add` now exposes the extra attack options even when opened without initial damage.
+
 ## Install or update
 
 Install using this manifest URL in Foundry’s **Add-on Modules**:
@@ -13,6 +26,8 @@ https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.jso
 ```
 
 For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
+
+**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.3.0** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.0** as well. Future stable updates use the stable manifest.
 
 ## Open Manual Damage
 
@@ -100,6 +115,16 @@ B415 also says that if a randomly rolled location is behind cover, the fragment 
 
 When **Direct hit** is selected, distance is irrelevant and its input is disabled. When **Airburst** is selected, posture is irrelevant and the posture controls are disabled. Blind fragmentation results remain hidden from non-GMs and require GM review.
 
+### An explosive attack with fragments: order of work
+
+1. Resolve and apply the **blast damage** in the normal ADD, reviewing explosion distance and protection for each recipient.
+2. Select the fragment recipients and open `/add` → **Attack options** → **Fragmentation…**, or `/add roll` → **Fragmentation…**.
+3. Enter the listed fragment damage. Choose the centre and review distances, posture, direct hits and airburst status. Distance zero alone does not mean the attack directly struck that recipient.
+4. Click **Resolve fragments**, inspect the results, then **Review hits in ADD**. If opened from an ADD, acknowledge that fragment review replaces its pending queue; do not leave unapplied blast damage there.
+5. Review and apply each fragment separately. If the rolled location is behind cover, adjudicate the cover and **Skip** that recipient's fragment hit.
+
+The chat message is a record, not a saved application queue. Closing after confirming discard, reloading the client, or cancelling a partially completed ADD queue does not provide an automatic resume or undo. Do not rerun a whole batch to recover unfinished hits: previously applied hits would be applied again.
+
 ## Multiple recipients
 
 Choose **One roll shared by all recipients** for one damage roll, or **Roll separately for each recipient** for independent totals tied to the listed tokens. When opened from an ADD, that list contains only the current and remaining recipients; earlier applied or skipped recipients are unchanged. A result cannot return if its original ADD has since been applied, advanced, or closed. Separate rolls require recipients before rolling. Refreshing their selection requires fresh separate rolls.
@@ -115,6 +140,8 @@ Each rolled batch can open one application queue or return once to its existing 
 ## Visibility and modifier bucket
 
 Choose **Public**, **GM and me**, **Blind to GM**, or **Only me** for the damage-roll chat message. Blind results are hidden from players in the workbench, and require GM review and application. The ADD controls the visibility of its injury-result messages separately.
+
+For blind fragmentation, have the GM run the helper and review the hits. A player's pending helper is not automatically transferred to the GM's client; the private chat record does not supply a cross-client review queue.
 
 **Include numeric modifier-bucket values** is off by default. When enabled, the current numeric modifiers are copied once for the batch and included in each roll. The bucket is not cleared or changed. Costs, actions, and other effects described in its entries are not executed. Review the entries yourself before including them; this is a numeric snapshot, not an attack roll.
 
@@ -167,6 +194,14 @@ await game.modules.get('gurps-manual-add').api.openFragmentation();
 An optional `tokens` array accepts canvas tokens or their IDs. `api.command('/add 3d+2 cut')` uses the chat parser. Explicit roller calls resolve when the window is launched; empty and numeric ADD calls resolve when the queue finishes or is cancelled. Neither return value counts actors damaged.
 
 ## Support and licence
+
+### Common questions
+
+- **Where is Fragmentation?** In plain `/add`, expand **Attack options**. It is also in the standalone `/add roll` window, but not in the attached Roll damage window.
+- **Nothing changed after Resolve fragments.** That is expected: choose **Review hits in ADD**, then apply injury in each ADD.
+- **The old centre or distances are sticking.** Manual overrides are preserved. Use **Reset centre & distances**, then enter zero or tick Direct hit on the new centre. Review all estimates before rolling.
+- **Chinks is disabled.** In Layered Armour it requires eligible impaling, piercing or tight-beam burning damage to a single location, rather than explosion/large-area damage. It represents an already-successful attack against a chink (GURPS 4e B400).
+- **ADD will not open.** Select permitted recipient tokens, check the GGA GM-only setting, and ensure a GM is connected. Finish or cancel any existing damage queue.
 
 Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual-add/issues). Released under the [MIT licence](LICENSE).
 
