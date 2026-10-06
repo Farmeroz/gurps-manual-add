@@ -84,7 +84,8 @@ globalThis.canvas = {
   ready: true,
   tokens: { controlled: [token], get: (id) => (id === 't' ? token : undefined) },
 };
-const { open, command, startQueue, startEventQueue, readRecipients } = await import('../scripts/main.mjs');
+const { open, command, startQueue, startEventQueue, readRecipients } =
+  await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 test('empty command and HUD-style token options open the ADD without an intermediate screen', async () => {
@@ -177,7 +178,6 @@ test('world disabled blocks both the roller and fixed-damage entrypoints', async
   assert.equal(windows.length, before);
   settings.set('enabled', true);
 });
-
 
 test('fragment event queue can review multiple hits on the same recipient and keeps audit text', async () => {
   const recipient = readRecipients()[0];
