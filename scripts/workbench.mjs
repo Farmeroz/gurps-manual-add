@@ -132,7 +132,7 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         <section class="manual-selection"><strong>Recipients</strong><p class="manual-recipient-names"></p><button type="button" data-action="refreshRecipients">Use currently selected tokens</button></section>
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
-        <footer class="manual-workbench-actions"><button type="button" data-action="roll">Roll damage</button><button type="button" data-action="review">Review and apply</button><button type="button" data-action="close">Close</button></footer>
+        <footer class="manual-workbench-actions"><button type="button" data-action="roll">Roll damage</button><button type="button" data-action="review">Review and apply</button><button type="button" data-action="fragmentation">Fragmentation…</button><button type="button" data-action="close">Close</button></footer>
         <small>Rolling does not apply damage. Each ADD uses its recipient’s DR, armour layers, and injury options. Injury-result visibility follows the ADD’s own controls.</small>
       </form>`;
     }
@@ -165,6 +165,7 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         if (action === 'close') void this.close();
         else if (action === 'roll') void this.rollDamage();
         else if (action === 'review') void this.review();
+        else if (action === 'fragmentation') void this.openFragmentation();
         else if (action === 'refreshRecipients') this.refreshRecipients();
       });
       this.refresh(root);
@@ -225,7 +226,25 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         (this.draft.mode === 'roll' && (!this.batch?.messageId || this.batch.hidden));
       root.querySelector('[data-action="refreshRecipients"]').disabled = locked || this.handedOff;
       root.querySelector('[data-action="refreshRecipients"]').hidden = this.attached;
+      const fragmentation = root.querySelector('[data-action="fragmentation"]');
+      fragmentation.hidden = this.attached;
+      fragmentation.disabled = locked || this.handedOff || !this.recipients.length;
       root.querySelector('[data-action="close"]').disabled = this.busy;
+    }
+
+    async openFragmentation() {
+      if (this.attached || this.busy || this.queueActive || this.handedOff) return false;
+      try {
+        this.services.assertEnabled();
+        if (typeof this.services.openFragmentation !== 'function')
+          throw new Error('Fragmentation helper is unavailable.');
+        await this.services.openFragmentation({ tokens: this.recipients.map((r) => r.token) });
+        return true;
+      } catch (error) {
+        this.error = error.message;
+        this.refresh();
+        return false;
+      }
     }
 
     refreshRecipients() {
