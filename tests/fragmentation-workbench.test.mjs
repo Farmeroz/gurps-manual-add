@@ -114,7 +114,7 @@ test('fragment helper is inert until resolve is chosen', () => {
 });
 
 test('B415 attack roll creates multiple random-location fragment events', async () => {
-  totals.splice(0, totals.length, 8, 8, 12);
+  totals.splice(0, totals.length, 11, 8, 12);
   const f = setup();
   f.app.rows.one.distance = '3';
   assert.equal(await f.app.resolveFragments(), true);
@@ -148,7 +148,7 @@ test('out-of-range target produces no event', async () => {
 });
 
 test('resolved hits hand off to the normal ADD event queue', async () => {
-  totals.splice(0, totals.length, 11, 9);
+  totals.splice(0, totals.length, 14, 9);
   const f = setup();
   await f.app.resolveFragments();
   assert.equal(f.app.events.length, 1);
@@ -158,7 +158,7 @@ test('resolved hits hand off to the normal ADD event queue', async () => {
 });
 
 test('blind player sees no rolled fragment detail and cannot apply locally', async () => {
-  totals.splice(0, totals.length, 11, 9);
+  totals.splice(0, totals.length, 14, 9);
   const f = setup();
   game.user.isGM = false;
   f.app.draft.visibility = 'blind';
