@@ -3,10 +3,12 @@ import { ID, parseCommand, validateSeed, collectRecipients } from './core.mjs';
 import { createManualDialogClass, RecipientSession } from './dialog.mjs';
 import { registerHudIntegration } from './hud.mjs';
 import { createWorkbenchClass } from './workbench.mjs';
+import { createFragmentationWorkbenchClass } from './fragmentation-workbench.mjs';
 
 let active = null,
   DialogClass = null,
   workbench = null,
+  fragmentation = null,
   initialising = false;
 const HELP =
   '/add opens the ADD; its Roll damage button opens an optional roller. /add 12 cut prefills fixed damage; /add 3d+2 cut prepares a standalone roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /madd is an alias. Rolling never applies injury.';
@@ -92,6 +94,18 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
       rollSeeds,
     );
     active = session;
+    session.openFragmentation = async (dialog) => {
+      const target = session.rollTarget(dialog);
+      return openFragmentation({
+        tokens: target.recipients.map((r) => r.token),
+        replacesQueue: true,
+        startEvents: async (events) => {
+          target.assertCurrent();
+          await dialog.close();
+          return startEventQueue(events);
+        },
+      });
+    };
     session.openRoller = (dialog) => {
       const target = session.rollTarget(dialog);
       const Workbench = createWorkbenchClass();
@@ -126,6 +140,91 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
   }
 }
 
+export async function startEventQueue(events) {
+  assertEnabled();
+  if (active || initialising) {
+    active?.dialog?.bringToTop?.();
+    throw new Error('Finish or cancel the current manual-damage queue first.');
+  }
+  if (!Array.isArray(events) || !events.length) throw new Error('No fragment hits to review.');
+  const unique = [];
+  const seen = new Set();
+  for (const event of events) {
+    const recipient = event?.recipient;
+    if (!recipient?.key || !event?.seed) throw new Error('A fragment event is invalid.');
+    if (!seen.has(recipient.key)) {
+      seen.add(recipient.key);
+      unique.push(recipient);
+    }
+  }
+  const current = readRecipients({ tokens: unique.map((r) => r.token) });
+  if (current.length !== unique.length || current.some((r, i) => r.key !== unique[i].key))
+    throw new Error('Recipient permissions or identities changed. Refresh your selection.');
+  if (
+    unique.some(
+      (r) => r.document.parent?.tokens?.get && !r.document.parent.tokens.get(r.document.id),
+    )
+  )
+    throw new Error('A recipient token was deleted. Refresh your selection.');
+  initialising = true;
+  try {
+    await initialiseDialog();
+    const recipients = events.map((event) => event.recipient);
+    const seeds = events.map((event) => ({
+      ...event.seed,
+      ...validateSeed(event.seed, GURPS.DamageTables.woundModifiers),
+    }));
+    const session = new RecipientSession(
+      DialogClass,
+      recipients,
+      seeds[0],
+      () => {
+        active = null;
+      },
+      seeds,
+    );
+    active = session;
+    if (!session.show()) throw session.error ?? new Error('The ADD could not be opened.');
+    return session;
+  } finally {
+    initialising = false;
+  }
+}
+
+export async function openFragmentation(options = {}) {
+  try {
+    assertEnabled();
+    if (fragmentation?.rendered) {
+      fragmentation.bringToTop?.();
+      if (options.replacesQueue || fragmentation.services.replacesQueue)
+        throw new Error('Close the existing fragmentation helper before opening one for this ADD.');
+      return fragmentation;
+    }
+    const recipients = readRecipients(options, true);
+    if (!recipients.length) throw new Error('Select permitted recipient tokens first.');
+    const Fragmentation = createFragmentationWorkbenchClass();
+    fragmentation = new Fragmentation(recipients, {
+      assertEnabled,
+      startEvents: options.startEvents ?? startEventQueue,
+      replacesQueue: Boolean(options.replacesQueue),
+    });
+    const currentFragmentation = fragmentation;
+    const originalClose = fragmentation.close.bind(fragmentation);
+    fragmentation.close = async (...args) => {
+      const result = await originalClose(...args);
+      if (!currentFragmentation.rendered && fragmentation === currentFragmentation)
+        fragmentation = null;
+      return result;
+    };
+    fragmentation.render(true);
+    return fragmentation;
+  } catch (error) {
+    log.error(error);
+    ui.notifications.error(`Manual damage: ${error.message}`);
+    return false;
+  }
+}
+
 export async function open(options = {}) {
   try {
     assertEnabled();
@@ -146,6 +245,7 @@ export async function open(options = {}) {
         initialRecipients: readRecipients(options, true),
         readRecipients: () => readRecipients({}, true),
         startQueue,
+        openFragmentation,
       });
       workbench.render(true);
       return true;
@@ -195,7 +295,7 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', () => {
   if (game.system.id !== 'gurps') return;
-  game.modules.get(ID).api = Object.freeze({ open, command });
+  game.modules.get(ID).api = Object.freeze({ open, command, openFragmentation });
   const registry = globalThis.GURPS?.ChatProcessors;
   if (typeof registry?.registerProcessor === 'function') {
     // Register with GGA itself so chat macros and OtF use the same processor.

@@ -7,6 +7,8 @@
   "scripts/help.mjs",
   "scripts/hud.mjs",
   "scripts/log.mjs",
+  "scripts/fragmentation.mjs",
+  "scripts/fragmentation-workbench.mjs",
   "scripts/main.mjs",
   "scripts/rolls.mjs",
   "scripts/tooltip-engine.mjs",

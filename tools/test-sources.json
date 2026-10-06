@@ -17,11 +17,12 @@
     "directory": "layered",
     "environment": "LAYERED_SOURCE",
     "repository": "Farmeroz/gurps-layered-armour",
-    "commit": "7046395018ab8a982eddfef93c18a72fab56a88b",
-    "version": "0.2.2",
+    "commit": "fa33dbdb7156388a894f053f761c3c78044bbf6f",
+    "version": "0.3.0-rc2",
     "files": [
       "scripts/core.mjs",
       "scripts/help.mjs",
+      "scripts/resources.mjs",
       "scripts/integration.mjs",
       "scripts/tooltip-engine.mjs"
     ]

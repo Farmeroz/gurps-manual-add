@@ -13,6 +13,12 @@ export const helpConfig = {
       'Use your currently selected tokens. Linked actors count once. Separate rolls must be made again if this selection is refreshed.',
     close:
       'Close the damage workbench. Chat rolls and any damage already applied remain. An open ADD queue continues independently.',
+    fragmentation:
+      'Open the separate GURPS 4e fragmentation helper for the selected recipients. Ordinary Manual Damage remains unchanged.',
+    resolveFragments:
+      'Roll the B415 fragment attack for each recipient, random hit locations for actual hits, and cutting damage for each fragment. This does not apply injury.',
+    reviewFragments:
+      'Send the resolved fragment hits to the normal ADD one at a time. Each hit keeps its own random location and uses normal armour and injury rules.',
   },
   fields: {
     mode: 'Choose a fixed basic-damage number or roll damage dice. Switching entry mode discards the pending result in this window; chat records remain.',
@@ -30,6 +36,8 @@ export const helpConfig = {
       'Copy the current numeric bucket values into this batch, once per roll. Entries are not removed, and costs or other described effects are not executed. Off by default.',
     visibility:
       'Choose who can see the damage roll in chat. Blind results are hidden from players in this window, and require GM review. ADD injury-result visibility is controlled separately.',
+    airburst:
+      'For B415 airbursts, ignore posture modifiers to fragment attacks. Only overhead cover protects; cover adjudication remains with the GM.',
     hitlocation:
       'Optional hit-location name. Leave blank to use each actor’s default, with Random replaced by a fixed default on opening. An unavailable location is flagged in the ADD.',
     basicDamage:

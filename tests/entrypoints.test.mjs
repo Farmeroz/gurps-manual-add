@@ -84,8 +84,23 @@ globalThis.canvas = {
   ready: true,
   tokens: { controlled: [token], get: (id) => (id === 't' ? token : undefined) },
 };
-const { open, command, startQueue, readRecipients } = await import('../scripts/main.mjs');
+const { open, command, startQueue, startEventQueue, readRecipients, openFragmentation } =
+  await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test('declining fragmentation close keeps the registered helper and pending hits', async () => {
+  const helper = await openFragmentation();
+  helper.events = [{}];
+  await helper.close();
+  assert.equal(helper.rendered, true);
+  assert.equal(await openFragmentation(), helper);
+  assert.equal(helper.events.length, 1);
+  helper.discardApproved = true;
+  await helper.close();
+  const replacement = await openFragmentation();
+  assert.notEqual(replacement, helper);
+  await replacement.close();
+});
 
 test('empty command and HUD-style token options open the ADD without an intermediate screen', async () => {
   const before = windows.length;
@@ -176,4 +191,60 @@ test('world disabled blocks both the roller and fixed-damage entrypoints', async
   assert.equal(await open({ damage: 4 }), false);
   assert.equal(windows.length, before);
   settings.set('enabled', true);
+});
+
+test('fragment event queue can review multiple hits on the same recipient and keeps audit text', async () => {
+  const recipient = readRecipients()[0];
+  const session = await startEventQueue([
+    {
+      recipient,
+      seed: {
+        damage: 6,
+        damageType: 'cut',
+        armorDivisor: 1,
+        hitlocation: 'Torso',
+        rollInfo: 'Fragment 1 audit',
+      },
+    },
+    {
+      recipient,
+      seed: {
+        damage: 9,
+        damageType: 'cut',
+        armorDivisor: 1,
+        hitlocation: 'Torso',
+        rollInfo: 'Fragment 2 audit',
+      },
+    },
+  ]);
+  assert.equal(session.dialog._calculator.basicDamage, 6);
+  assert.equal(session.dialog.rollInfo, 'Fragment 1 audit');
+  session.next();
+  assert.equal(session.dialog._calculator.basicDamage, 9);
+  assert.equal(session.dialog.rollInfo, 'Fragment 2 audit');
+  session.finish(true);
+  assert.equal(await session.completion, true);
+});
+
+test('plain ADD opens fragmentation and review replaces its queue without applying base damage', async () => {
+  const session = await startQueue(readRecipients(), {
+    damage: 0,
+    damageType: 'cr',
+    armorDivisor: 1,
+  });
+  const helper = await session.openFragmentation(session.dialog);
+  assert.equal(helper.services.replacesQueue, true);
+  assert.equal(session.done, false);
+  const fragments = await helper.services.startEvents([
+    {
+      recipient: readRecipients()[0],
+      seed: { damage: 7, damageType: 'cut', armorDivisor: 1, hitlocation: 'Torso' },
+    },
+  ]);
+  assert.equal(session.done, true);
+  assert.equal(await session.completion, false);
+  assert.equal(fragments.dialog._calculator.basicDamage, 7);
+  await assert.rejects(helper.services.startEvents([]), /changed or finished/);
+  fragments.finish(true);
+  await helper.close();
 });

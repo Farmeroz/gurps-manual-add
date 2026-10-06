@@ -200,6 +200,165 @@ try {
   console.log(
     'PASS: optional roller returns once to the existing ADD, closes, and opens no new queue',
   );
+  await page.evaluate(async () => {
+    help.hideAll();
+    game.users = [{ isGM: true, active: true }];
+    foundry.utils.randomID = () => 'test';
+    globalThis.fragmentOpened = false;
+    globalThis.ui = {
+      notifications: {
+        error: (message) => {
+          throw new Error(message);
+        },
+      },
+    };
+    const { createManualDialogClass } = await import('/scripts/dialog.mjs');
+    const Native = class {
+      static get defaultOptions() {
+        return { classes: [] };
+      }
+      constructor(actor, seed, options) {
+        this.actor = actor;
+        this.options = options;
+        this._calculator = { ...seed, basicDamage: seed.damage, hitLocation: 'Torso' };
+      }
+      activateListeners() {}
+      render() {}
+    };
+    const recipient = {
+      name: 'Recipient',
+      actor: { defaultHitLocation: 'Torso', hitLocationsWithDR: [{ where: 'Torso' }] },
+      document: { texture: {} },
+    };
+    const session = {
+      index: 0,
+      recipients: [recipient],
+      openFragmentation: async () => {
+        fragmentOpened = true;
+      },
+    };
+    const Manual = createManualDialogClass(Native);
+    globalThis.manual = new Manual(session, recipient, {
+      damage: 0,
+      damageType: 'cr',
+      armorDivisor: 1,
+    });
+    const host = document.querySelector('.window-content');
+    host.innerHTML = '<div class="gga-app"></div>';
+    manual.element = host;
+    manual.activateListeners(host);
+  });
+  await page.locator('.manual-attack-options summary').click();
+  await page.locator('[data-attack-area]').selectOption('large');
+  assert.equal(await page.evaluate(() => manual._calculator.hitLocation), 'Large-Area');
+  await page.locator('[data-attack-area]').selectOption('explosion');
+  assert.equal(await page.evaluate(() => manual._calculator.isExplosion), true);
+  await page.locator('[data-attack-area]').selectOption('normal');
+  assert.equal(await page.evaluate(() => manual._calculator.hitLocation), 'Torso');
+  assert.equal(await page.evaluate(() => manual._calculator.isExplosion), false);
+  await page.locator('[data-action="openFragmentation"]').click();
+  assert.equal(await page.evaluate(() => fragmentOpened), true);
+  assert.deepEqual(errors, []);
+  console.log('PASS: plain ADD exposes attack options and fragmentation without initial damage');
+
+  await page.evaluate(async () => {
+    const { createFragmentationWorkbenchClass } =
+      await import('/scripts/fragmentation-workbench.mjs');
+    GURPS.SSRT = { getModifier: () => 0 };
+    globalThis.Roll = {
+      create: (formula) => {
+        if (formula !== '3d6') throw new Error('Unresolved StringTerm');
+        return { total: 14, evaluate: async () => {} };
+      },
+    };
+    globalThis.canvas = {
+      ready: true,
+      scene: { id: 's', grid: { units: 'yards' } },
+      grid: { measurePath: ([a, b]) => ({ euclidean: Math.abs(a.x - b.x) }) },
+    };
+    const recipients = ['One', 'Two', 'Three'].map((name, i) => ({
+      key: name,
+      name,
+      document: { parent: { id: 's' } },
+      token: { center: { x: i * 3, y: 0 } },
+      actor: { hitLocationsWithDR: [{ where: 'Torso', roll: [14] }] },
+    }));
+    const Base = class {
+      static get defaultOptions() {
+        return {};
+      }
+      activateListeners() {}
+    };
+    const Fragmentation = createFragmentationWorkbenchClass(Base);
+    globalThis.frag = new Fragmentation(recipients, {
+      roller: async () => ({
+        _getDiceData: () => ({}),
+        _createDraggableSection: async () => ({ damage: 7 }),
+      }),
+      createMessage: async () => ({ id: 'frag' }),
+    });
+    const host = document.querySelector('.window-content');
+    host.innerHTML = frag.markup();
+    frag.element = host.querySelector('form');
+    frag.activateListeners(frag.element);
+  });
+  await page.locator('[data-recipient="Three"] [data-frag-field="distance"]').fill('8');
+  await page.locator('[data-recipient="One"] [data-frag-field="distance"]').fill('0');
+  assert.equal(
+    await page.locator('[data-recipient="Two"] [data-frag-field="distance"]').inputValue(),
+    '3',
+  );
+  assert.equal(
+    await page.locator('[data-recipient="Three"] [data-frag-field="distance"]').inputValue(),
+    '8',
+  );
+  await page.locator('[data-action="resolveFragments"]').click();
+  await page.waitForFunction(() => frag.events?.length === 3);
+  assert.equal(await page.locator('.manual-workbench-error').textContent(), '');
+  await page.locator('[data-recipient="Two"] [data-frag-field="distance"]').fill('9');
+  assert.equal(await page.locator('.manual-discard-warning').isVisible(), true);
+  assert.equal(
+    await page.locator('[data-recipient="Two"] [data-frag-field="distance"]').inputValue(),
+    '3',
+  );
+  await page.locator('[data-action="keepFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events.length), 3);
+  await page.locator('[data-action="resolveFragments"]').click();
+  assert.equal(
+    await page.locator('[data-action="discardFragments"]').textContent(),
+    'Discard hits and roll again',
+  );
+  await page.locator('[data-action="discardFragments"]').click();
+  await page.waitForFunction(() => frag.events?.length === 3 && !frag.busy);
+  assert.deepEqual(errors, []);
+  await page.screenshot({
+    path: path.join(root, 'test-output/fragmentation-preview.png'),
+    fullPage: true,
+  });
+  console.log(
+    'PASS: multiple fragmentation recipients, explicit d6 rolls, automatic distances and manual overrides',
+  );
+  await page.locator('[data-action="close"]').click();
+  assert.equal(await page.locator('.manual-discard-warning').isVisible(), true);
+  assert.equal(await page.locator('[data-action="reviewFragments"]').isDisabled(), true);
+  await page.locator('[data-action="keepFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events.length), 3);
+  assert.equal(await page.locator('[data-action="reviewFragments"]').isDisabled(), false);
+  await page.locator('[data-action="resetDistances"]').click();
+  assert.equal(
+    await page.locator('[data-action="discardFragments"]').textContent(),
+    'Discard hits and reset distances',
+  );
+  await page.locator('[data-action="discardFragments"]').click();
+  assert.equal(await page.evaluate(() => frag.events), null);
+  await page.locator('[data-recipient="Three"] [data-frag-field="distance"]').fill('0');
+  assert.equal(await page.locator('[data-origin]').inputValue(), 'Three');
+  assert.equal(
+    await page.locator('[data-recipient="One"] [data-frag-field="distance"]').inputValue(),
+    '6',
+  );
+  assert.deepEqual(errors, []);
+  console.log('PASS: close warning preserves pending hits; confirmed reset allows a new centre');
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));
