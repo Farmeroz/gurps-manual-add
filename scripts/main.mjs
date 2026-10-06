@@ -148,11 +148,20 @@ export async function startEventQueue(events) {
   const current = readRecipients({ tokens: unique.map((r) => r.token) });
   if (current.length !== unique.length || current.some((r, i) => r.key !== unique[i].key))
     throw new Error('Recipient permissions or identities changed. Refresh your selection.');
+  if (
+    unique.some(
+      (r) => r.document.parent?.tokens?.get && !r.document.parent.tokens.get(r.document.id),
+    )
+  )
+    throw new Error('A recipient token was deleted. Refresh your selection.');
   initialising = true;
   try {
     await initialiseDialog();
     const recipients = events.map((event) => event.recipient);
-    const seeds = events.map((event) => validateSeed(event.seed, GURPS.DamageTables.woundModifiers));
+    const seeds = events.map((event) => ({
+      ...event.seed,
+      ...validateSeed(event.seed, GURPS.DamageTables.woundModifiers),
+    }));
     const session = new RecipientSession(
       DialogClass,
       recipients,
