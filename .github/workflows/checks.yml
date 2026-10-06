@@ -27,6 +27,11 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check formatting
         run: npm run format:check
+      - name: Show formatter diff on failure
+        if: failure()
+        run: |
+          npx prettier --write scripts/fragmentation-workbench.mjs scripts/fragmentation.mjs tests/entrypoints.test.mjs tests/fragmentation-workbench.test.mjs
+          git diff -- scripts/fragmentation-workbench.mjs scripts/fragmentation.mjs tests/entrypoints.test.mjs tests/fragmentation-workbench.test.mjs
       - name: Check syntax
         run: npm run check:syntax
       - name: Run automated suite
