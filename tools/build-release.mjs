@@ -10,12 +10,14 @@ const repository = 'Farmeroz/gurps-manual-add';
 const tag = `v${manifest.version}`;
 const archiveName = `${manifest.id}-${tag}.zip`;
 assert.equal(manifest.id, 'gurps-manual-add');
-assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
+assert.match(manifest.version, /^\d+\.\d+\.\d+(?:-rc[1-9]\d*)?$/);
 assert.equal(pkg.version, manifest.version, 'Package and module versions must match.');
 assert.equal(manifest.url, `https://github.com/${repository}`);
 assert.equal(
   manifest.manifest,
-  `https://github.com/${repository}/releases/latest/download/module.json`,
+  manifest.version.includes('-')
+    ? `https://github.com/${repository}/releases/download/${tag}/module.json`
+    : `https://github.com/${repository}/releases/latest/download/module.json`,
 );
 assert.equal(
   manifest.download,
