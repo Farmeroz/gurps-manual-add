@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.3.0
+# GURPS Manual Damage 0.3.1
 
 Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. A separate GURPS 4e fragmentation helper resolves B415 fragment hits without cluttering ordinary damage entry. GURPS Layered Armour is supported when installed and enabled.
 
@@ -13,7 +13,11 @@ Requires Foundry VTT 14 and GURPS Game Aid (GGA) 0.18.x. No additional modules a
 
 **Apply directly (ignore DR)** bypasses armour. Use calculated injury for ordinary damage resolution.
 
-### What is new in 0.3.0?
+### What is new in 0.3.1?
+
+NPCs without hit locations now open temporary manual review: enter DR (including 0) for calculated injury, or deliberately apply direct damage. Their sheets remain unchanged. Failed ADD opening preserves rolled results for retry.
+
+### Features introduced in 0.3.0
 
 The GURPS 4e fragmentation helper rolls fragment attacks, locations and damage, then sends each hit to ADD for review. It includes blast-centre distance estimates, manual overrides, a centre/distance reset, and warnings before discarding pending hits. Ordinary `/add` now exposes the extra attack options even when opened without initial damage.
 
@@ -27,7 +31,7 @@ https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.jso
 
 For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
 
-**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.3.0** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.0** as well. Future stable updates use the stable manifest.
+**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.3.1** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.1** as well. Future stable updates use the stable manifest.
 
 ## Open Manual Damage
 
@@ -42,6 +46,14 @@ Use **Attack options** in ordinary `/add` to open **Fragmentation…** or choose
 Use `/add roll` or a dice command to open the standalone roller, including without selected tokens. Its **Use currently selected tokens** button updates the list. You can make a shared roll for chat only and add recipients later without rerolling. The standalone workbench also offers **Fragmentation…** when recipients are selected.
 
 ## Enter fixed damage
+
+### Incomplete NPCs without hit locations
+
+The ADD opens in **temporary manual review** when the actor has no hit-location table. Enter **Reviewed DR for this recipient** (including 0 if unprotected), then apply calculated injury. The preview uses provisional DR 0 until you enter a value; calculated application is blocked until then. Alternatively, **Apply directly (ignore DR)** deliberately subtracts the entered damage without protection or calculated wounding.
+
+The sheet is unchanged. No anatomy, location multipliers, random body location or crippling location is assumed. Layered protection and armour degradation are bypassed in this mode; review DR and injury modifiers yourself. If Layered Armour is enabled, use its version 0.3.1 or later. Each recipient starts with its own unfilled DR field. Fragment hits against an actor without locations use this same manual review instead of inventing a body plan.
+
+If the ADD cannot finish opening, the roller retains its results for retry rather than marking them as transferred. This does not restore hits already applied in a partially completed queue.
 
 Enter basic damage, its type, and armour divisor directly in the ADD. Basic damage is the amount before protection and wounding, not the final injury.
 

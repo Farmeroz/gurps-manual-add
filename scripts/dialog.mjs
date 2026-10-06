@@ -8,7 +8,7 @@ const rootOf = (element) => (element?.nodeType ? element : element?.[0]);
 export function createManualDialogClass(NativeADD) {
   return class ManualDamageDialog extends NativeADD {
     constructor(session, recipient, seed) {
-      const { location, fallback } = locationFor(recipient.actor, seed.hitlocation);
+      const { location, fallback, manual } = locationFor(recipient.actor, seed.hitlocation);
       // GGA 0.18.23 assumes an active GM exists when damage has no attacker.
       if (!game.users.find((u) => u.isGM && u.active)) {
         throw new Error(
@@ -35,6 +35,18 @@ export function createManualDialogClass(NativeADD) {
       this.rollInfo = seed.rollInfo;
       this.session = session;
       this.recipient = recipient;
+      this.manualLocation = Boolean(manual);
+      this.manualDR = '';
+      if (this.manualLocation) {
+        this._calculator.manualDamageNoLocations = true;
+        Object.defineProperty(this._calculator, 'hitLocationRole', {
+          configurable: true,
+          get: () => null,
+        });
+        this._calculator.userEnteredDR = 0; // Preview only; application requires explicit DR.
+        this._calculator.useLocationModifiers = false;
+        this._calculator._useBodyHits = false;
+      }
       this.isSimpleDialog = false;
       this._calculator.hitLocation = location; // Includes GGA's Large-Area pseudo-location.
       if (seed.damageType === 'User Entered') {
@@ -51,6 +63,11 @@ export function createManualDialogClass(NativeADD) {
       this._applied = false;
       this._advancing = false;
       this._focusDamage = true;
+      if (typeof NativeADD.prototype._render === 'function')
+        this.ready = new Promise((resolve, reject) => {
+          this._resolveReady = resolve;
+          this._rejectReady = reject;
+        });
       if (fallback)
         ui.notifications.warn(
           `${recipient.name}: "${seed.hitlocation}" is unavailable; review ${location} instead.`,
@@ -60,11 +77,17 @@ export function createManualDialogClass(NativeADD) {
     // The native constructor may roll a random hit location or optional Body Hits
     // check. Defer constructor checks until explicitly requested in the ADD.
     async _adjustHitLocationIfNecessary() {
-      if (!this._manualReady) return;
+      if (!this._manualReady || this.manualLocation) return;
       return super._adjustHitLocationIfNecessary();
     }
 
     async getData(options) {
+      if (this.manualLocation) {
+        this._calculator.hitLocation = 'User Entered';
+        this._calculator.userEnteredDR = /^\d+$/.test(this.manualDR) ? Number(this.manualDR) : 0;
+        this._calculator.useLocationModifiers = false;
+        this._calculator._useBodyHits = false;
+      }
       const data = await super.getData(options);
       data.sourceTokenName = 'Manual damage';
       return data;
@@ -72,9 +95,17 @@ export function createManualDialogClass(NativeADD) {
 
     async _render(...args) {
       try {
-        return await super._render(...args);
+        const result = await super._render(...args);
+        this._resolveReady?.(this);
+        this._resolveReady = this._rejectReady = null;
+        return result;
       } catch (error) {
         this.session?.finish(false);
+        if (this._rejectReady) {
+          this._rejectReady(error);
+          this._resolveReady = this._rejectReady = null;
+          return this;
+        }
         throw error;
       }
     }
@@ -90,6 +121,19 @@ export function createManualDialogClass(NativeADD) {
         ? 'Applied. You can use the normal effect controls, then move to the next recipient.'
         : `Recipient ${this.session.index + 1} of ${this.session.recipients.length}: ${this.recipient.name}. Enter basic damage; calculated injury uses this actor’s DR and ADD options.`;
       panel.append(description);
+      if (this.manualLocation) {
+        const notice = document.createElement('div');
+        notice.innerHTML =
+          '<p><strong>No hit-location table: temporary manual review.</strong> No anatomy or location effects are assumed, and the sheet is unchanged. Enter DR below (including 0 if unprotected) before calculated injury. The preview uses provisional DR 0 until entered. Layered armour and automatic location effects are bypassed; review injury modifiers yourself. Apply directly deliberately ignores DR.</p><label>Reviewed DR for this recipient <input data-manual-dr type="number" min="0" step="1" placeholder="Enter DR"></label>';
+        const input = notice.querySelector('[data-manual-dr]');
+        input.value = this.manualDR;
+        input.disabled = this._busy || this._applied;
+        input.addEventListener('change', () => {
+          this.manualDR = input.value.trim();
+          this.render(false);
+        });
+        panel.append(notice);
+      }
       if (this.rollInfo) {
         const roll = document.createElement('p');
         roll.className = 'manual-roll-origin';
@@ -158,7 +202,7 @@ export function createManualDialogClass(NativeADD) {
         : this._calculator.hitLocation === 'Large-Area'
           ? 'large'
           : 'normal';
-      area.disabled = this._busy || this._applied;
+      area.disabled = this._busy || this._applied || this.manualLocation;
       area.addEventListener('change', () => {
         if (this._busy || this._applied) return;
         this._attackOptionsOpen = true;
@@ -276,6 +320,18 @@ export function createManualDialogClass(NativeADD) {
       try {
         this.assertPermission();
         this.readBasicDamage();
+        if (this.manualLocation && !direct) {
+          const input = rootOf(this.element)?.querySelector('[data-manual-dr]');
+          if (input) this.manualDR = input.value.trim();
+          if (!/^\d+$/.test(this.manualDR) || !Number.isSafeInteger(Number(this.manualDR)))
+            throw new Error(
+              'Enter reviewed DR (including 0 if unprotected) before applying calculated injury.',
+            );
+          this._calculator.userEnteredDR = Number(this.manualDR);
+          this._calculator.hitLocation = 'User Entered';
+          this._calculator.useLocationModifiers = false;
+          this._calculator._useBodyHits = false;
+        }
         if (!Number.isSafeInteger(this.timesToApply) || this.timesToApply < 1) {
           throw new Error('Number of applications must be a positive whole number.');
         }
@@ -447,6 +503,11 @@ export class RecipientSession {
     try {
       this.dialog = new this.DialogClass(this, this.recipients[this.index], {
         ...(this.rollSeeds?.[this.index] ?? this.seed),
+      });
+      this.dialog.ready?.catch((error) => {
+        this.error = error;
+        log.error('Open failed', error);
+        ui.notifications.error(`Manual damage: ${error.message}`);
       });
       this.dialog.render(true, { height: 'auto' });
       return true;

@@ -109,7 +109,10 @@ export function collectRecipients(tokens, user, gmOnly) {
 
 export function locationFor(actor, requested) {
   const locations = actor.hitLocationsWithDR ?? [];
-  const names = locations.map((x) => x.where);
+  const names = locations
+    .map((x) => x.where)
+    .filter((name) => typeof name === 'string' && name.trim());
+  if (!names.length) return { location: 'User Entered', fallback: false, manual: true };
   const wanted = requested ?? actor.defaultHitLocation;
   if (wanted === 'Large-Area') return { location: wanted, fallback: false };
   const match = names.find((x) => x.toLowerCase() === String(wanted).toLowerCase());

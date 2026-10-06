@@ -65,6 +65,7 @@ export function randomHitLocation(actor, roll) {
   const total = whole(roll, 'Hit-location roll', 3);
   if (total > 18) throw new Error('Hit-location roll cannot exceed 18.');
   const entries = actor?.hitLocationsWithDR ?? [];
+  if (!entries.length) return 'User Entered'; // No invented anatomy; ADD requires manual DR review.
   const match = entries.find((entry) => Array.isArray(entry.roll) && entry.roll.includes(total));
   if (!match?.where)
     throw new Error(

@@ -226,6 +226,38 @@ if (!source) {
   }
   const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+  test('incomplete NPC uses explicit temporary DR without adding sheet locations', async () => {
+    reset();
+    const a = actor('incomplete');
+    a.hitLocationsWithDR = [];
+    a.system.hitlocations = {};
+    a._hitLocationRolls = {};
+    const s = session([a]);
+    const d = s.dialog;
+    assert.equal(d.manualLocation, true);
+    assert.equal(d._calculator.hitLocationRole, null);
+    assert.equal(await d.submitInjuryApply(null, true, true), false);
+    assert.equal(a.system.HP.value, 30);
+    d.manualDR = '4';
+    assert.equal(await d.submitInjuryApply(null, true, true), true);
+    assert.equal(a.system.HP.value, 18);
+    assert.deepEqual(a.system.hitlocations, {});
+    assert.deepEqual(a.hitLocationsWithDR, []);
+    s.finish(true);
+  });
+
+  test('incomplete NPC can deliberately take direct damage without DR entry', async () => {
+    reset();
+    const a = actor('direct-incomplete');
+    a.hitLocationsWithDR = [];
+    a.system.hitlocations = {};
+    const s = session([a], { damage: 5, damageType: 'cr', armorDivisor: 1 });
+    assert.equal(await s.dialog.submitDirectApply(true, true), true);
+    assert.equal(a.system.HP.value, 25);
+    assert.deepEqual(a.system.hitlocations, {});
+    s.finish(true);
+  });
+
   test('opens full native ADD, reads DR and actor, creates no roll/update/message', async () => {
     reset();
     const a = actor('one', 4);
