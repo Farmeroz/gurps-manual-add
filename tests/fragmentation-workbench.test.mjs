@@ -120,7 +120,11 @@ test('B415 attack roll creates multiple random-location fragment events', async 
   assert.equal(await f.app.resolveFragments(), true);
   assert.equal(f.app.events.length, 2);
   assert.deepEqual(
-    f.app.events.map((event) => [event.seed.damageType, event.seed.armorDivisor, event.seed.hitlocation]),
+    f.app.events.map((event) => [
+      event.seed.damageType,
+      event.seed.armorDivisor,
+      event.seed.hitlocation,
+    ]),
     [
       ['cut', 1, 'Left Arm'],
       ['cut', 1, 'Right Arm'],
