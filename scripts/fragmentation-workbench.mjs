@@ -19,7 +19,48 @@ const POSTURES = [
 ];
 
 function roll3d() {
-  return Roll.create('3d');
+  return Roll.create('3d6');
+}
+
+// Measure token centres only when the scene scale has an unambiguous conversion.
+export function distanceInYards(origin, recipient, canvas = globalThis.canvas) {
+  if (!canvas?.ready || !canvas.grid?.measurePath) return null;
+  const scene = canvas.scene;
+  if (
+    !scene ||
+    origin.document?.parent?.id !== scene.id ||
+    recipient.document?.parent?.id !== scene.id
+  )
+    return null;
+  const units = String(scene.grid?.units ?? '')
+    .trim()
+    .toLowerCase();
+  const factor = {
+    yd: 1,
+    yds: 1,
+    yard: 1,
+    yards: 1,
+    ft: 1 / 3,
+    foot: 1 / 3,
+    feet: 1 / 3,
+    m: 1 / 0.9144,
+    meter: 1 / 0.9144,
+    meters: 1 / 0.9144,
+    metre: 1 / 0.9144,
+    metres: 1 / 0.9144,
+  }[units];
+  const a = origin.token?.center,
+    b = recipient.token?.center;
+  if (!factor || ![a?.x, a?.y, b?.x, b?.y].every(Number.isFinite)) return null;
+  try {
+    const horizontal = canvas.grid.measurePath([a, b]).euclidean;
+    const vertical =
+      Number(recipient.document.elevation ?? 0) - Number(origin.document.elevation ?? 0);
+    if (!Number.isFinite(horizontal) || horizontal < 0 || !Number.isFinite(vertical)) return null;
+    return Math.round(Math.hypot(horizontal, vertical) * factor * 100) / 100;
+  } catch {
+    return null;
+  }
 }
 
 async function evaluateRoll(roll) {
@@ -72,6 +113,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
             distance: '1',
             posture: 'standing',
             directHit: false,
+            distanceEdited: false,
           },
         ]),
       );
@@ -81,6 +123,20 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       this.busy = false;
       this.error = '';
       this.handedOff = false;
+      this.originKey = '';
+      this.originChosen = false;
+    }
+
+    estimateDistances() {
+      if (this.draft.airburst) return;
+      const origin = this.recipients.find((r) => r.key === this.originKey);
+      if (!origin) return;
+      for (const recipient of this.recipients) {
+        const row = this.rows[recipient.key];
+        if (row.distanceEdited || row.directHit) continue;
+        const distance = distanceInYards(origin, recipient);
+        if (distance !== null) row.distance = String(distance);
+      }
     }
 
     markup() {
@@ -90,7 +146,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       const rows = this.recipients
         .map((recipient) => {
           const sm = actorSizeModifier(recipient.actor);
-          return `<tr data-recipient="${escapeHTML(recipient.key)}"><td><strong>${escapeHTML(recipient.name)}</strong><small>SM ${sm >= 0 ? '+' : ''}${sm}</small></td><td><input data-frag-field="distance" type="number" min="0" step="1" value="1" aria-label="${escapeHTML(recipient.name)} distance"></td><td><select data-frag-field="posture" aria-label="${escapeHTML(recipient.name)} posture">${postureOptions}</select></td><td><input data-frag-field="directHit" type="checkbox" aria-label="${escapeHTML(recipient.name)} direct hit"></td></tr>`;
+          return `<tr data-recipient="${escapeHTML(recipient.key)}"><td><strong>${escapeHTML(recipient.name)}</strong><small>SM ${sm >= 0 ? '+' : ''}${sm}</small></td><td><input data-frag-field="distance" type="number" min="0" step="any" value="1" aria-label="${escapeHTML(recipient.name)} distance"></td><td><select data-frag-field="posture" aria-label="${escapeHTML(recipient.name)} posture">${postureOptions}</select></td><td><input data-frag-field="directHit" type="checkbox" aria-label="${escapeHTML(recipient.name)} direct hit"></td></tr>`;
         })
         .join('');
       return `<form class="manual-fragmentation-form" autocomplete="off">
@@ -101,6 +157,9 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           <label>Roll visibility<select data-field="visibility"><option value="public">Public</option><option value="gm">GM and me</option><option value="blind">Blind to GM</option><option value="self">Only me</option></select></label>
         </div>
         <small>Fragmentation is cutting damage with no inherited armour divisor.  Danger radius is 5 yards per damage die.  Airbursts ignore posture modifiers.</small>
+        <label>Blast centre for distance estimates<select data-origin><option value="">Manual distances</option>${this.recipients.map((r) => `<option value="${escapeHTML(r.key)}">${escapeHTML(r.name)}</option>`).join('')}</select></label>
+        <small>The first zero-distance or Direct hit recipient suggests the centre. Estimates use token centres and elevations on a scene measured in yards, feet or metres. Manually edited distances are preserved. Review all distances; airbursts and unavailable scene measurements require manual entry. Zero distance alone does not grant a direct hit.</small>
+        ${this.services.replacesQueue ? '<p>Review hits in ADD will replace the current unapplied damage queue with these fragment hits.</p>' : ''}
         <table class="manual-fragment-table"><thead><tr><th>Recipient</th><th>Distance (yd)</th><th>Posture</th><th>Direct hit</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
@@ -119,6 +178,10 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       root.addEventListener('submit', (event) => event.preventDefault());
       root.addEventListener('input', (event) => {
         if (this.busy || this.handedOff) return;
+        if (event.target.matches('[data-origin]')) {
+          this.originKey = event.target.value;
+          this.originChosen = true;
+        }
         const field = event.target.closest('[data-field]');
         if (field) {
           this.draft[field.dataset.field] = field.type === 'checkbox' ? field.checked : field.value;
@@ -131,10 +194,22 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         if (row && frag) {
           const state = this.rows[row.dataset.recipient];
           state[frag.dataset.fragField] = frag.type === 'checkbox' ? frag.checked : frag.value;
+          if (frag.dataset.fragField === 'distance') state.distanceEdited = true;
+          if (
+            !this.originChosen &&
+            (state.directHit || (state.distance.trim() !== '' && Number(state.distance) === 0))
+          ) {
+            this.originKey = row.dataset.recipient;
+            this.originChosen = true;
+          }
           this.events = null;
           this.summary = [];
           this.rolls = [];
         }
+        this.estimateDistances();
+        this.events = null;
+        this.summary = [];
+        this.rolls = [];
         this.error = '';
         this.refresh(root);
       });
@@ -152,6 +227,11 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
     refresh(root = rootOf(this.element)) {
       if (!root) return;
       const locked = this.busy || this.handedOff;
+      for (const node of root.querySelectorAll('[data-field]')) {
+        if (node.type === 'checkbox') node.checked = Boolean(this.draft[node.dataset.field]);
+        else node.value = this.draft[node.dataset.field];
+      }
+      root.querySelector('[data-origin]').value = this.originKey;
       root.querySelectorAll('input, select, button').forEach((node) => {
         if (node.dataset.action === 'close') node.disabled = this.busy;
         else node.disabled = locked;
@@ -160,6 +240,9 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         const state = this.rows[row.dataset.recipient];
         const distance = row.querySelector('[data-frag-field="distance"]');
         const posture = row.querySelector('[data-frag-field="posture"]');
+        distance.value = state.distance;
+        posture.value = state.posture;
+        row.querySelector('[data-frag-field="directHit"]').checked = state.directHit;
         if (distance) distance.disabled = locked || Boolean(state?.directHit);
         if (posture) posture.disabled = locked || Boolean(this.draft.airburst);
       }
@@ -217,6 +300,8 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
           rolls = [];
         for (const recipient of this.recipients) {
           const row = this.rows[recipient.key];
+          if (!row.directHit && String(row.distance).trim() === '')
+            throw new Error(`Enter a distance for ${recipient.name}.`);
           const distance = Number(row.distance);
           const posture = POSTURES.find(([value]) => value === row.posture)?.[2] ?? 0;
           const target = fragmentAttackTarget({

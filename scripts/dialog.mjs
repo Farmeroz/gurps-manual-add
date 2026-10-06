@@ -144,6 +144,51 @@ export function createManualDialogClass(NativeADD) {
       });
       controls.prepend(roller);
       panel.append(controls);
+      const options = document.createElement('details');
+      options.className = 'manual-attack-options';
+      options.open = Boolean(this._attackOptionsOpen);
+      options.innerHTML =
+        '<summary>Attack options: fragmentation, large-area, explosion, chinks</summary><label>Attack area <select data-attack-area><option value="normal">Single location</option><option value="large">Large-area</option><option value="explosion">Explosion</option></select></label><p>Chinks / weak point is in Armour Layers below. Select impaling, piercing or tight-beam burning damage to enable it. Large-area and explosion exposure choices appear there when selected. These armour options require GURPS Layered Armour.</p>';
+      options.addEventListener('toggle', () => {
+        this._attackOptionsOpen = options.open;
+      });
+      const area = options.querySelector('[data-attack-area]');
+      area.value = this._calculator.isExplosion
+        ? 'explosion'
+        : this._calculator.hitLocation === 'Large-Area'
+          ? 'large'
+          : 'normal';
+      area.disabled = this._busy || this._applied;
+      area.addEventListener('change', () => {
+        if (this._busy || this._applied) return;
+        this._attackOptionsOpen = true;
+        const calc = this._calculator;
+        if (calc.hitLocation !== 'Large-Area') this._singleLocation = calc.hitLocation;
+        calc.isExplosion = area.value === 'explosion';
+        calc.hitLocation =
+          area.value === 'normal'
+            ? (this._singleLocation ?? locationFor(this.actor).location)
+            : 'Large-Area';
+        this.render(false);
+      });
+      if (this.session.openFragmentation) {
+        const fragment = document.createElement('button');
+        fragment.type = 'button';
+        fragment.dataset.action = 'openFragmentation';
+        fragment.textContent = 'Fragmentation…';
+        fragment.disabled = this._busy || this._applied;
+        fragment.addEventListener('click', async (event) => {
+          event.preventDefault();
+          try {
+            this.assertPermission();
+            await this.session.openFragmentation(this);
+          } catch (error) {
+            ui.notifications.error(`Manual damage: ${error.message}`);
+          }
+        });
+        options.append(fragment);
+      }
+      panel.append(options);
       if (this.session.recipients.length > 1) {
         const note = document.createElement('small');
         note.textContent =

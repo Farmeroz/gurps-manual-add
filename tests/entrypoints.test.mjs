@@ -211,3 +211,26 @@ test('fragment event queue can review multiple hits on the same recipient and ke
   session.finish(true);
   assert.equal(await session.completion, true);
 });
+
+test('plain ADD opens fragmentation and review replaces its queue without applying base damage', async () => {
+  const session = await startQueue(readRecipients(), {
+    damage: 0,
+    damageType: 'cr',
+    armorDivisor: 1,
+  });
+  const helper = await session.openFragmentation(session.dialog);
+  assert.equal(helper.services.replacesQueue, true);
+  assert.equal(session.done, false);
+  const fragments = await helper.services.startEvents([
+    {
+      recipient: readRecipients()[0],
+      seed: { damage: 7, damageType: 'cut', armorDivisor: 1, hitlocation: 'Torso' },
+    },
+  ]);
+  assert.equal(session.done, true);
+  assert.equal(await session.completion, false);
+  assert.equal(fragments.dialog._calculator.basicDamage, 7);
+  await assert.rejects(helper.services.startEvents([]), /changed or finished/);
+  fragments.finish(true);
+  await helper.close();
+});

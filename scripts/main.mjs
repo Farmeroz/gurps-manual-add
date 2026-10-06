@@ -94,6 +94,18 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
       rollSeeds,
     );
     active = session;
+    session.openFragmentation = async (dialog) => {
+      const target = session.rollTarget(dialog);
+      return openFragmentation({
+        tokens: target.recipients.map((r) => r.token),
+        replacesQueue: true,
+        startEvents: async (events) => {
+          target.assertCurrent();
+          await dialog.close();
+          return startEventQueue(events);
+        },
+      });
+    };
     session.openRoller = (dialog) => {
       const target = session.rollTarget(dialog);
       const Workbench = createWorkbenchClass();
@@ -184,6 +196,8 @@ export async function openFragmentation(options = {}) {
     assertEnabled();
     if (fragmentation?.rendered) {
       fragmentation.bringToTop?.();
+      if (options.replacesQueue || fragmentation.services.replacesQueue)
+        throw new Error('Close the existing fragmentation helper before opening one for this ADD.');
       return fragmentation;
     }
     const recipients = readRecipients(options, true);
@@ -191,7 +205,8 @@ export async function openFragmentation(options = {}) {
     const Fragmentation = createFragmentationWorkbenchClass();
     fragmentation = new Fragmentation(recipients, {
       assertEnabled,
-      startEvents: startEventQueue,
+      startEvents: options.startEvents ?? startEventQueue,
+      replacesQueue: Boolean(options.replacesQueue),
     });
     const originalClose = fragmentation.close.bind(fragmentation);
     fragmentation.close = async (...args) => {

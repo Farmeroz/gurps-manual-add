@@ -22,7 +22,9 @@ For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Dat
 
 The ADD starts with your selected recipient tokens. Targets and GGA’s Last Actor are not substituted for selected recipients. Inside the ADD, **Roll damage…** opens the optional roller for the current and remaining recipients.
 
-Use `/add roll` or a dice command to open the standalone roller, including without selected tokens. Its **Use currently selected tokens** button updates the list. You can make a shared roll for chat only and add recipients later without rerolling. The standalone workbench also offers **Fragmentation…** when recipients are selected; the normal ADD and attached roller stay uncluttered.
+Use **Attack options** in ordinary `/add` to open **Fragmentation…** or choose single-location, large-area, or explosion damage, even when starting with no damage number. Chinks is visible in the Armour Layers panel and explains which damage types enable it. These armour controls require GURPS Layered Armour. Review explosion distance in the native ADD before applying injury.
+
+Use `/add roll` or a dice command to open the standalone roller, including without selected tokens. Its **Use currently selected tokens** button updates the list. You can make a shared roll for chat only and add recipients later without rerolling. The standalone workbench also offers **Fragmentation…** when recipients are selected.
 
 ## Enter fixed damage
 
@@ -68,9 +70,11 @@ Expressions must be complete. Actor-relative expressions such as `sw+2` or `thr`
 
 ## Fragmentation
 
-Choose **Fragmentation…** from the standalone Manual Damage workbench to resolve the fragmentation rules on Basic Set: Campaigns, p. 415. This is a separate helper so ordinary fixed damage and damage rolling do not acquire controls that most attacks do not need.
+Choose **Fragmentation…** from `/add` → **Attack options**, or from the standalone Manual Damage workbench, to resolve the GURPS 4e fragmentation rules on Basic Set: Campaigns, p. 415. When opened from an ADD, reviewing fragment hits replaces the current unapplied queue; the original basic damage is not also applied. Closing the helper before review leaves the original ADD available.
 
 Enter the listed fragmentation damage, such as `2d cut`. For each selected recipient, enter distance from the blast, choose posture, and tick **Direct hit** if the explosive attack actually struck that target. **Airburst** is a single global option.
+
+The first recipient entered at distance zero or marked Direct hit suggests the blast centre. You can change the centre using its dropdown. For tokens on the active scene, the helper estimates straight-line distances between token centres, including token elevation, converting scene yards, feet or metres into yards. Previously edited distances are preserved; every estimate can be overridden. Airbursts, unknown units and unavailable token measurements require manual distances. Zero range does not itself mark a direct hit. Measurement uses Foundry's [grid measurement API](https://foundryvtt.com/api/v14/interfaces/foundry.grid.types.GridMeasurePathResult.html).
 
 The helper follows B415:
 

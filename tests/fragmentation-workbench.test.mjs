@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
-import { createFragmentationWorkbenchClass } from '../scripts/fragmentation-workbench.mjs';
+import {
+  createFragmentationWorkbenchClass,
+  distanceInYards,
+} from '../scripts/fragmentation-workbench.mjs';
 
 const types = { cr: {}, cut: {}, imp: {}, burn: {} };
 globalThis.GURPS = {
@@ -14,13 +17,16 @@ globalThis.CONFIG = { sounds: { dice: 'dice.wav' } };
 
 const totals = [];
 globalThis.Roll = {
-  create: () => ({
-    total: null,
-    async evaluate() {
-      this.total = totals.shift();
-      return this;
-    },
-  }),
+  create: (formula) => {
+    assert.equal(formula, '3d6', 'Foundry requires explicit die faces, not GURPS shorthand 3d');
+    return {
+      total: null,
+      async evaluate() {
+        this.total = totals.shift();
+        return this;
+      },
+    };
+  },
 };
 
 const Base = class {
@@ -172,4 +178,68 @@ test('blind player sees no rolled fragment detail and cannot apply locally', asy
   assert.match(text, /visible to the GM/);
   assert.doesNotMatch(text, /Torso|cut|6/);
   assert.equal(f.app.element.querySelector('[data-action="reviewFragments"]').disabled, true);
+});
+
+test('distance estimates convert scene units and include elevation; unsafe contexts stay manual', () => {
+  const a = { token: { center: { x: 0, y: 0 } }, document: { parent: { id: 's' }, elevation: 0 } };
+  const b = { token: { center: { x: 3, y: 4 } }, document: { parent: { id: 's' }, elevation: 12 } };
+  const canvas = {
+    ready: true,
+    scene: { id: 's', grid: { units: 'feet' } },
+    grid: { measurePath: () => ({ euclidean: 5 }) },
+  };
+  assert.equal(distanceInYards(a, b, canvas), 4.33);
+  canvas.scene.grid.units = 'metres';
+  assert.equal(distanceInYards(a, b, canvas), 14.22);
+  canvas.scene.grid.units = 'squares';
+  assert.equal(distanceInYards(a, b, canvas), null);
+  canvas.scene.grid.units = 'yards';
+  b.document.parent.id = 'other';
+  assert.equal(distanceInYards(a, b, canvas), null);
+});
+
+test('zero distance seeds centre and other distances, preserving overrides and airburst entry', () => {
+  const recipients = ['a', 'b', 'c'].map((key, i) => ({
+    ...recipient(key, key),
+    document: { parent: { id: 's' } },
+    token: { center: { x: i * 4, y: 0 } },
+  }));
+  globalThis.canvas = {
+    ready: true,
+    scene: { id: 's', grid: { units: 'yards' } },
+    grid: { measurePath: ([a, b]) => ({ euclidean: Math.abs(b.x - a.x) }) },
+  };
+  const f = setup(recipients);
+  const edit = (key, value) => {
+    const input = f.app.element.querySelector(
+      `[data-recipient="${key}"] [data-frag-field="distance"]`,
+    );
+    input.value = value;
+    input.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  };
+  edit('c', '20');
+  edit('a', '0');
+  assert.equal(f.app.originKey, 'a');
+  assert.equal(f.app.rows.a.directHit, false);
+  assert.equal(f.app.rows.b.distance, '4');
+  assert.equal(f.app.rows.c.distance, '20');
+  f.app.draft.airburst = true;
+  recipients[1].token.center.x = 7;
+  f.app.estimateDistances();
+  assert.equal(f.app.rows.b.distance, '4');
+  f.app.draft.airburst = false;
+  edit('b', '9');
+  f.app.estimateDistances();
+  assert.equal(f.app.rows.b.distance, '9');
+  delete globalThis.canvas;
+});
+
+test('direct-hit entry suggests centre without changing other direct-hit flags', () => {
+  const f = setup([recipient('a', 'A'), recipient('b', 'B')]);
+  const input = f.app.element.querySelector('[data-recipient="b"] [data-frag-field="directHit"]');
+  input.checked = true;
+  input.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+  assert.equal(f.app.originKey, 'b');
+  assert.equal(f.app.rows.a.directHit, false);
+  assert.equal(f.app.rows.a.distance, '1');
 });
