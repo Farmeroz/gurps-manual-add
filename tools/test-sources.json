@@ -17,8 +17,8 @@
     "directory": "layered",
     "environment": "LAYERED_SOURCE",
     "repository": "Farmeroz/gurps-layered-armour",
-    "commit": "6b5ec451f0bc760b07d9db0beb2e7067158468ad",
-    "version": "0.3.1-rc1",
+    "commit": "e5dfe50663ff1534e724f91a155cb43abee659db",
+    "version": "0.3.1",
     "files": [
       "scripts/core.mjs",
       "scripts/help.mjs",
