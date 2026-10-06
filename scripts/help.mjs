@@ -13,6 +13,8 @@ export const helpConfig = {
       'Use your currently selected tokens. Linked actors count once. Separate rolls must be made again if this selection is refreshed.',
     close:
       'Close the damage workbench. Chat rolls and any damage already applied remain. An open ADD queue continues independently.',
+    fragmentation:
+      'Open the separate GURPS 4e fragmentation helper for the selected recipients. Ordinary Manual Damage remains unchanged.',
   },
   fields: {
     mode: 'Choose a fixed basic-damage number or roll damage dice. Switching entry mode discards the pending result in this window; chat records remain.',
