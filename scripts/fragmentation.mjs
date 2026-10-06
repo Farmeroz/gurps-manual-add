@@ -51,8 +51,12 @@ export function fragmentHitCount({ directHit = false, attackRoll, target, inRang
   const roll = whole(attackRoll, 'Fragment attack roll', 3);
   if (roll > 18) throw new Error('Fragment attack roll cannot exceed 18.');
   if (!Number.isFinite(Number(target))) throw new Error('Fragment attack target is invalid.');
-  if (roll > Number(target)) return 0;
-  return 1 + Math.floor((Number(target) - roll) / 3);
+  // Ordinary GURPS success-roll limits still apply: 17-18 always fail,
+  // while 3-4 always succeed even if modifiers drive effective skill lower.
+  const effective = Number(target);
+  const success = roll <= 4 || (roll <= 16 && roll <= effective);
+  if (!success) return 0;
+  return 1 + Math.max(0, Math.floor((effective - roll) / 3));
 }
 
 export function randomHitLocation(actor, roll) {
