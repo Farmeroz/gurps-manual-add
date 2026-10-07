@@ -188,14 +188,30 @@ export function createManualDialogClass(NativeADD) {
       });
       controls.prepend(roller);
       panel.append(controls);
-      const options = document.createElement('details');
+      const options = document.createElement('section');
       options.className = 'manual-attack-options';
-      options.open = Boolean(this._attackOptionsOpen);
-      options.innerHTML =
-        '<summary>Attack options: fragmentation, large-area, explosion, chinks</summary><label>Attack area <select data-attack-area><option value="normal">Single location</option><option value="large">Large-area</option><option value="explosion">Explosion</option></select></label><p>Chinks / weak point is in Armour Layers below. Select impaling, piercing or tight-beam burning damage to enable it. Large-area and explosion exposure choices appear there when selected. These armour options require GURPS Layered Armour.</p>';
-      options.addEventListener('toggle', () => {
-        this._attackOptionsOpen = options.open;
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'manual-attack-options-toggle';
+      toggle.textContent = 'Attack options: fragmentation, large-area, explosion, chinks';
+      const optionFields = document.createElement('div');
+      optionFields.id = `${this.options.id}-attack-options`;
+      optionFields.className = 'manual-attack-options-fields';
+      toggle.setAttribute('aria-controls', optionFields.id);
+      const setOptionsOpen = (open) => {
+        this._attackOptionsOpen = open;
+        toggle.setAttribute('aria-expanded', String(open));
+        optionFields.hidden = !open;
+      };
+      setOptionsOpen(Boolean(this._attackOptionsOpen));
+      toggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setOptionsOpen(!this._attackOptionsOpen);
       });
+      optionFields.innerHTML =
+        '<label>Attack area <select data-attack-area><option value="normal">Single location</option><option value="large">Large-area</option><option value="explosion">Explosion</option></select></label><p>Chinks / weak point is in Armour Layers below. Select impaling, piercing or tight-beam burning damage to enable it. Large-area and explosion exposure choices appear there when selected. These armour options require GURPS Layered Armour.</p>';
+      options.append(toggle, optionFields);
       const area = options.querySelector('[data-attack-area]');
       area.value = this._calculator.isExplosion
         ? 'explosion'
@@ -230,7 +246,7 @@ export function createManualDialogClass(NativeADD) {
             ui.notifications.error(`Manual damage: ${error.message}`);
           }
         });
-        options.append(fragment);
+        optionFields.append(fragment);
       }
       panel.append(options);
       if (this.session.recipients.length > 1) {
