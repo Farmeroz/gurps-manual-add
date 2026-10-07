@@ -222,8 +222,14 @@ try {
         this.options = options;
         this._calculator = { ...seed, basicDamage: seed.damage, hitLocation: 'Torso' };
       }
-      activateListeners() {}
-      render() {}
+      activateListeners(html) {
+        // Model an ancestor cancelling native disclosure default actions.
+        html.addEventListener('click', (event) => event.preventDefault());
+      }
+      render() {
+        this.element.innerHTML = '<div class="gga-app"></div>';
+        this.activateListeners(this.element);
+      }
     };
     const recipient = {
       name: 'Recipient',
@@ -248,9 +254,21 @@ try {
     manual.element = host;
     manual.activateListeners(host);
   });
-  await page.locator('.manual-attack-options summary').click();
+  const attackToggle = page.locator('.manual-attack-options-toggle');
+  assert.equal(await attackToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(await page.locator('[data-attack-area]').isVisible(), false);
+  await attackToggle.click();
+  assert.equal(await attackToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(await page.locator('[data-attack-area]').isVisible(), true);
+  await attackToggle.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await attackToggle.getAttribute('aria-expanded'), 'false');
+  await page.keyboard.press('Space');
+  assert.equal(await attackToggle.getAttribute('aria-expanded'), 'true');
   await page.locator('[data-attack-area]').selectOption('large');
   assert.equal(await page.evaluate(() => manual._calculator.hitLocation), 'Large-Area');
+  assert.equal(await attackToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(await page.locator('[data-attack-area]').isVisible(), true);
   await page.locator('[data-attack-area]').selectOption('explosion');
   assert.equal(await page.evaluate(() => manual._calculator.isExplosion), true);
   await page.locator('[data-attack-area]').selectOption('normal');
