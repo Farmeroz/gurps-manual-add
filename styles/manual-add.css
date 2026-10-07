@@ -199,3 +199,23 @@
   display: block;
   font-weight: normal;
 }
+
+.gurps-manual-add .manual-attack-options-toggle {
+  width: 100%;
+  height: auto;
+  white-space: normal;
+  text-align: left;
+  cursor: pointer;
+}
+.gurps-manual-add .manual-attack-options-toggle::before {
+  content: '+ ';
+}
+.gurps-manual-add .manual-attack-options-toggle[aria-expanded='true']::before {
+  content: '− ';
+}
+.gurps-manual-add .manual-attack-options-fields[hidden] {
+  display: none !important;
+}
+.gurps-manual-add .manual-attack-options-fields {
+  padding-top: 6px;
+}
