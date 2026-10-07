@@ -1,4 +1,8 @@
-# GURPS Manual Damage 0.3.1
+# GURPS Manual Damage 0.3.2
+
+## Release 0.3.2
+
+Fix the attack-options expander with an explicit mouse- and keyboard-accessible button, preserving its state after area changes. Declare verified Foundry VTT 14 compatibility.
 
 Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. A separate GURPS 4e fragmentation helper resolves B415 fragment hits without cluttering ordinary damage entry. GURPS Layered Armour is supported when installed and enabled.
 
