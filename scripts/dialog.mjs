@@ -48,7 +48,9 @@ export function createManualDialogClass(NativeADD) {
         this._calculator._useBodyHits = false;
       }
       this.isSimpleDialog = false;
-      this._calculator.hitLocation = location; // Includes GGA's Large-Area pseudo-location.
+      this._calculator.hitLocation =
+        manual && seed.hitlocation === 'Large-Area' ? 'Large-Area' : location;
+      this._calculator.isExplosion = Boolean(seed.isExplosion);
       if (seed.damageType === 'User Entered') {
         this._calculator.damageType = seed.damageType;
         this._calculator.userEnteredWoundModifier = seed.userEnteredWoundModifier;
@@ -83,7 +85,10 @@ export function createManualDialogClass(NativeADD) {
 
     async getData(options) {
       if (this.manualLocation) {
-        this._calculator.hitLocation = 'User Entered';
+        this._calculator.hitLocation =
+          this._calculator.isExplosion || this._calculator.hitLocation === 'Large-Area'
+            ? 'Large-Area'
+            : 'User Entered';
         this._calculator.userEnteredDR = /^\d+$/.test(this.manualDR) ? Number(this.manualDR) : 0;
         this._calculator.useLocationModifiers = false;
         this._calculator._useBodyHits = false;
@@ -124,7 +129,7 @@ export function createManualDialogClass(NativeADD) {
       if (this.manualLocation) {
         const notice = document.createElement('div');
         notice.innerHTML =
-          '<p><strong>No hit-location table: temporary manual review.</strong> No anatomy or location effects are assumed, and the sheet is unchanged. Enter DR below (including 0 if unprotected) before calculated injury. The preview uses provisional DR 0 until entered. Layered armour and automatic location effects are bypassed; review injury modifiers yourself. Apply directly deliberately ignores DR.</p><label>Reviewed DR for this recipient <input data-manual-dr type="number" min="0" step="1" placeholder="Enter DR"></label>';
+          '<p><strong>No hit-location table: temporary manual review.</strong> No anatomy or location effects are assumed, and the sheet is unchanged. Choose the attack area and enter the appropriate reviewed DR below (including 0 if unprotected) before calculated injury. For large-area or explosion damage, review the applicable overall protection yourself; no armour average is inferred. The preview uses provisional DR 0 until entered. Layered armour and automatic location effects are bypassed; review injury modifiers yourself. Apply directly deliberately ignores DR.</p><label>Reviewed DR for this recipient <input data-manual-dr type="number" min="0" step="1" placeholder="Enter DR"></label>';
         const input = notice.querySelector('[data-manual-dr]');
         input.value = this.manualDR;
         input.disabled = this._busy || this._applied;
@@ -218,7 +223,10 @@ export function createManualDialogClass(NativeADD) {
         : this._calculator.hitLocation === 'Large-Area'
           ? 'large'
           : 'normal';
-      area.disabled = this._busy || this._applied || this.manualLocation;
+      area.disabled = this._busy || this._applied;
+      area.dataset.help = this.manualLocation
+        ? 'Choose single-location, large-area, or explosion damage. Enter reviewed DR appropriate to this attack; no hit-location table or armour average is assumed.'
+        : 'Choose single-location, large-area, or explosion damage for this recipient.';
       area.addEventListener('change', () => {
         if (this._busy || this._applied) return;
         this._attackOptionsOpen = true;
@@ -344,7 +352,10 @@ export function createManualDialogClass(NativeADD) {
               'Enter reviewed DR (including 0 if unprotected) before applying calculated injury.',
             );
           this._calculator.userEnteredDR = Number(this.manualDR);
-          this._calculator.hitLocation = 'User Entered';
+          this._calculator.hitLocation =
+            this._calculator.isExplosion || this._calculator.hitLocation === 'Large-Area'
+              ? 'Large-Area'
+              : 'User Entered';
           this._calculator.useLocationModifiers = false;
           this._calculator._useBodyHits = false;
         }

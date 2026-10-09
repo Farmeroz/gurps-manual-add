@@ -246,6 +246,61 @@ if (!source) {
     s.finish(true);
   });
 
+  for (const explosion of [false, true]) {
+    test(`manual DR keeps ${explosion ? 'explosion' : 'large-area'} through render and apply`, async () => {
+      reset();
+      const a = actor('area-incomplete');
+      a.hitLocationsWithDR = [];
+      a.system.hitlocations = {};
+      a._hitLocationRolls = {};
+      const s = session([a], {
+        damage: 60,
+        damageType: 'cr',
+        armorDivisor: 2,
+        hitlocation: 'Large-Area',
+        isExplosion: explosion,
+      });
+      const d = s.dialog;
+      d._calculator.hexesFromExplosion = 2;
+      await d.getData();
+      assert.equal(d._calculator.hitLocation, 'Large-Area');
+      assert.equal(d._calculator.isExplosion, explosion);
+      assert.equal(await d.submitInjuryApply(null, true, true), false);
+      assert.equal(a.system.HP.value, 30);
+      d.manualDR = '4';
+      await d.getData();
+      assert.equal(d._calculator.DR, 4);
+      assert.equal(d._calculator.effectiveDR, explosion ? 4 : 2);
+      assert.equal(d._calculator.useLocationModifiers, false);
+      assert.equal(d._calculator.hitLocationRole, null);
+      const injury = d._calculator.pointsToApply;
+      assert.equal(injury, explosion ? 6 : 58);
+      assert.equal(await d.submitInjuryApply(null, true, true), true);
+      assert.equal(a.system.HP.value, 30 - injury);
+      assert.deepEqual(a.system.hitlocations, {});
+      assert.equal(d._calculator.hitLocation, 'Large-Area');
+      s.finish(true);
+    });
+  }
+
+  test('explosion context reaches the next recipient without copying reviewed DR', async () => {
+    reset();
+    const a = actor('first-no-locations');
+    a.hitLocationsWithDR = [];
+    a.system.hitlocations = {};
+    const b = actor('second', 8);
+    const s = session([a, b]);
+    const d = s.dialog;
+    d.manualDR = '4';
+    d._calculator.isExplosion = true;
+    await d.advance();
+    assert.equal(s.dialog.actor, b);
+    assert.equal(s.dialog._calculator.isExplosion, true);
+    assert.equal(s.dialog._calculator.hitLocation, 'Large-Area');
+    assert.equal(s.dialog._calculator.DR, 8);
+    s.finish(true);
+  });
+
   test('incomplete NPC can deliberately take direct damage without DR entry', async () => {
     reset();
     const a = actor('direct-incomplete');
