@@ -222,3 +222,15 @@ An optional `tokens` array accepts canvas tokens or their IDs. `api.command('/ad
 Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual-add/issues). Released under the [MIT licence](LICENSE).
 
 GURPS is a trademark of Steve Jackson Games. This unofficial module is not affiliated with or endorsed by Steve Jackson Games, Foundry Gaming LLC, or the GURPS Game Aid maintainers. GGA source is not bundled.
+
+## 0.3.3 candidate: area attacks without hit locations
+
+Actors without a hit-location table can now select Single location, Large-area, or Explosion
+in Attack options. The selection survives rerendering and calculated injury. Enter reviewed DR
+appropriate to the selected attack, including 0 for an unprotected recipient. No hit locations
+are added to the actor, no armour average is inferred, and automatic location modifiers and
+layered armour remain bypassed in this manual-review fallback.
+
+Explosion distance and armour-divisor handling remain with GGA. The attack context follows
+the recipient queue, but each recipient still uses its own protection and distance review.
+This is a bug-fix prerelease for live testing; stable 0.3.2 remains available.

@@ -220,7 +220,10 @@ try {
       constructor(actor, seed, options) {
         this.actor = actor;
         this.options = options;
-        this._calculator = { ...seed, basicDamage: seed.damage, hitLocation: 'Torso' };
+        this._calculator = { ...seed, basicDamage: seed.damage, hitLocation: seed.hitlocation };
+      }
+      async getData() {
+        return {};
       }
       activateListeners(html) {
         // Model an ancestor cancelling native disclosure default actions.
@@ -295,6 +298,25 @@ try {
   await page.locator('[data-manual-dr]').blur();
   assert.equal(await page.evaluate(() => manual.manualDR), '4');
   assert.equal(await page.evaluate(() => manual.actor.hitLocationsWithDR.length), 0);
+  await attackToggle.click();
+  assert.equal(await page.locator('[data-attack-area]').isEnabled(), true);
+  for (const mode of ['large', 'explosion', 'normal']) {
+    await page.locator('[data-attack-area]').selectOption(mode);
+    assert.equal(await page.locator('[data-attack-area]').inputValue(), mode);
+    assert.equal(await page.evaluate(() => manual._calculator.isExplosion), mode === 'explosion');
+    assert.equal(
+      await page.evaluate(() => manual._calculator.hitLocation),
+      mode === 'normal' ? 'User Entered' : 'Large-Area',
+    );
+    assert.equal(await page.locator('[data-manual-dr]').inputValue(), '4');
+  }
+  await page.locator('[data-attack-area]').selectOption('explosion');
+  await page.screenshot({
+    path: path.join(root, 'test-output/manual-area-review.png'),
+    fullPage: true,
+  });
+  assert.equal(await page.evaluate(() => manual.actor.hitLocationsWithDR.length), 0);
+  console.log('PASS: no-location NPC can switch area modes and keep reviewed DR through rerenders');
   console.log(
     'PASS: incomplete NPC opens with blank explicit DR and leaves actor locations unchanged',
   );

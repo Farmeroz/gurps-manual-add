@@ -130,6 +130,7 @@ export function commonValues(calculator) {
     damageType: calculator.damageType,
     armorDivisor: calculator.armorDivisor,
     hitlocation: calculator.hitLocation,
+    isExplosion: Boolean(calculator.isExplosion),
     damageModifier: calculator.damageModifier,
     userEnteredWoundModifier:
       calculator.damageType === 'User Entered' ? calculator.userEnteredWoundModifier : undefined,
