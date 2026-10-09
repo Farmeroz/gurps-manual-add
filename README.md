@@ -223,7 +223,7 @@ Report problems through [GitHub Issues](https://github.com/Farmeroz/gurps-manual
 
 GURPS is a trademark of Steve Jackson Games. This unofficial module is not affiliated with or endorsed by Steve Jackson Games, Foundry Gaming LLC, or the GURPS Game Aid maintainers. GGA source is not bundled.
 
-## 0.3.3 candidate: area attacks without hit locations
+## 0.3.3: area attacks without hit locations
 
 Actors without a hit-location table can now select Single location, Large-area, or Explosion
 in Attack options. The selection survives rerendering and calculated injury. Enter reviewed DR
@@ -233,4 +233,4 @@ layered armour remain bypassed in this manual-review fallback.
 
 Explosion distance and armour-divisor handling remain with GGA. The attack context follows
 the recipient queue, but each recipient still uses its own protection and distance review.
-This is a bug-fix prerelease for live testing; stable 0.3.2 remains available.
+This release fixes the disabled Attack area selector for recipients without hit locations.
