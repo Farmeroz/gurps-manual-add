@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.3.2
+# GURPS Manual Damage 0.4.0-rc1
 
 ## Release 0.3.2
 
@@ -7,6 +7,31 @@ Fix the attack-options expander with an explicit mouse- and keyboard-accessible 
 Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. A separate GURPS 4e fragmentation helper resolves B415 fragment hits without cluttering ordinary damage entry. GURPS Layered Armour is supported when installed and enabled.
 
 Requires Foundry VTT 14 and GURPS Game Aid (GGA) 0.18.x. No additional modules are required.
+
+## Area attacks: Uniform AoE, explosions and cones
+
+Open **/add area** (or **/add aoe**) for the compact area helper. **/add explosion** starts in Explosion mode. From an existing ADD, use **Attack options → Area attack…**; from the standalone roller, use **Area attack…**. Ordinary damage entry remains unchanged.
+
+1. Select recipients, or use **Send area to Manual Damage** in the companion Cones module's Region Controls.
+2. Choose **Uniform AoE**, **Explosion** or **Cone** and fixed damage or dice.
+3. Check the recipient list. Untick anyone not affected. **Recipients and distances** contains **Add selected tokens**, **Refresh template** and **Reset distances**.
+4. Click **Prepare damage**, check the results, then **Review in ADD**. Preparing records results only; applying calculated injury remains a separate action in each ADD.
+
+**Uniform AoE** uses the same basic damage for everyone, with no distance falloff. Dice are rolled once. Each recipient still gets their own DR and injury calculation. **Cone** also uses uniform basic damage; the Region supplies the shape. Special Dissipation effects are not calculated.
+
+**Explosion** shows distance and Direct hit controls. Collateral damage is divided by three times distance in yards (minimum one yard), rounded down, and receives no armour divisor. A direct hit receives full damage and retains the attack's divisor. Entering distance zero does not make it a direct hit. Large-area protection is used. Dice default to separate rolls per recipient, with an explicit shared-roll GM shortcut. Collateral radius is automatically 2 × dice × damage multiplier; fixed damage requires the original attack's radius in yards. Recipients beyond that radius and zero-damage results do not enter ADD. References: GURPS 4e B400, B413–414. Internal/contact explosions, special falloff enhancements and Dissipation require separate adjudication.
+
+Template measurements run from the shape's centre/apex to token centres, including elevation, in recognised yards, feet or metres. Distances remain editable. For manual attacks, the first zero-distance or direct-hit recipient suggests the origin; use the origin dropdown or reset to change it. Review token-edge cases, cover and dodge-and-drop yourself.
+
+Inputs lock once results exist. **Reset results** explicitly discards them before editing or rerolling. Closing with pending results asks before discarding. Chat or ADD opening failures retain prepared dice for retry. Sending the same batch to ADD twice is blocked. Moving a template or scene tokens invalidates its snapshot: reset results and **Refresh template** to use the new positions. Refresh replaces the candidate list and its manual overrides. Linked tokens sharing one actor are still reviewed once; separate unlinked NPCs remain independent.
+
+The original ADD queue is replaced only after acknowledging that its unapplied entries will be replaced. Earlier applied injury is retained. Finish the area queue before using **Reset or resolve fragmentation → Fragmentation…**. This carries the listed recipients and distances into the existing fragmentation helper; review its recipient list separately because fragment range can exceed the blast. Opening a helper never applies blast or fragment injury automatically.
+
+### Test installation
+
+Use Manual Damage **0.4.0-rc1** with Cones **0.2.0-rc1** for template handoff. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
+
+Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.4.0-rc1/module.json
 
 ## Quick start for players and GMs
 

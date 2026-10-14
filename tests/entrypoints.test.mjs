@@ -298,3 +298,41 @@ test('plain ADD opens fragmentation and review replaces its queue without applyi
   fragments.finish(true);
   await helper.close();
 });
+
+test('area commands and ADD button open the area helper without rolling or replacing anything yet', async () => {
+  const app = await command('/add aoe');
+  assert.equal(app.draft.mode, 'uniform');
+  assert.equal(app.prepared, false);
+  await app.close();
+  const blast = await command('/add explosion');
+  assert.equal(blast.draft.mode, 'explosion');
+  await blast.close();
+  const session = await startQueue(readRecipients(), {
+    damage: 24,
+    damageType: 'cr',
+    armorDivisor: 1,
+  });
+  const helper = await session.openArea(session.dialog);
+  assert.equal(helper.draft.damage, '24');
+  assert.equal(helper.acknowledged, false);
+  assert.equal(session.done, false);
+  const events = [
+    {
+      recipient: readRecipients()[0],
+      seed: {
+        damage: 24,
+        damageType: 'cr',
+        armorDivisor: 1,
+        hitlocation: 'Large-Area',
+        isExplosion: true,
+        hexesFromExplosion: 2,
+      },
+    },
+  ];
+  // Failed validation after detaching must allow the original prepared batch to retry.
+  await assert.rejects(helper.services.startEvents([]), /No damage events/);
+  const areaSession = await helper.services.startEvents(events);
+  assert.equal(areaSession.dialog._calculator.hexesFromExplosion, 2);
+  areaSession.finish(true);
+  await helper.close();
+});

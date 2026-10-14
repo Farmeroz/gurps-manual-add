@@ -1,3 +1,4 @@
+import { areaEvents } from '../scripts/area.mjs';
 // Run with GGA_SOURCE pointing to an installed GGA 0.18 source directory.
 // Real GGA calculator and ADD resolution code; Foundry documents/UI are mocked.
 import test from 'node:test';
@@ -225,6 +226,44 @@ if (!source) {
     return s;
   }
   const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+  test('area seeds reach native ADD with one falloff only and direct-hit armour divisors intact', () => {
+    reset();
+    const r = recipient(actor('area', 4));
+    const rows = { [r.key]: { include: true, distance: '2', directHit: false } };
+    const types = { cr: {} };
+    const seed = areaEvents(
+      [r],
+      rows,
+      { damage: 60, damageType: 'cr', armorDivisor: 10 },
+      'explosion',
+      types,
+      12,
+    )[0].seed;
+    const d = new Manual({ index: 0, recipients: [r] }, r, seed);
+    assert.equal(d._calculator.basicDamage, 60);
+    assert.equal(d._calculator.explosionDivisor, 6);
+    assert.equal(d._calculator.effectiveDamage, 10);
+    assert.equal(d._calculator.effectiveDR, 4);
+    assert.equal(d._calculator.pointsToApply, 6);
+    rows[r.key].directHit = true;
+    const direct = areaEvents(
+      [r],
+      rows,
+      { damage: 60, damageType: 'cr', armorDivisor: 10 },
+      'explosion',
+      types,
+      12,
+    )[0].seed;
+    const dd = new Manual({ index: 0, recipients: [r] }, r, direct);
+    assert.equal(dd._calculator.effectiveDamage, 60);
+    assert.equal(dd._calculator.armorDivisor, 10);
+    const uniform = areaEvents([r], rows, { damage: 10, damageType: 'cr' }, 'uniform', types)[0]
+      .seed;
+    const ud = new Manual({ index: 0, recipients: [r] }, r, uniform);
+    assert.equal(ud._calculator.effectiveDamage, 10);
+    assert.equal(ud._calculator.pointsToApply, 6);
+  });
 
   test('incomplete NPC uses explicit temporary DR without adding sheet locations', async () => {
     reset();

@@ -13,5 +13,7 @@
   "scripts/rolls.mjs",
   "scripts/tooltip-engine.mjs",
   "scripts/workbench.mjs",
-  "styles/manual-add.css"
+  "styles/manual-add.css",
+  "scripts/area.mjs",
+  "scripts/area-workbench.mjs"
 ]

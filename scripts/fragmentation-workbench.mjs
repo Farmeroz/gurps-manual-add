@@ -129,6 +129,9 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
       this.discardApproved = false;
       this.pendingEdit = null;
       this.blastAcknowledged = !this.services.replacesQueue;
+      for (const [key, value] of Object.entries(services.initialDistances ?? {})) {
+        if (this.rows[key]) Object.assign(this.rows[key], { ...value, distanceEdited: true });
+      }
     }
 
     resetDistances() {

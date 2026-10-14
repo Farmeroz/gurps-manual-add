@@ -1,3 +1,4 @@
+import { createAreaWorkbenchClass } from './area-workbench.mjs';
 import * as log from './log.mjs';
 import { ID, parseCommand, validateSeed, collectRecipients, locationFor } from './core.mjs';
 import { createManualDialogClass, RecipientSession } from './dialog.mjs';
@@ -5,13 +6,14 @@ import { registerHudIntegration } from './hud.mjs';
 import { createWorkbenchClass } from './workbench.mjs';
 import { createFragmentationWorkbenchClass } from './fragmentation-workbench.mjs';
 
+let areaWorkbench = null;
 let active = null,
   DialogClass = null,
   workbench = null,
   fragmentation = null,
   initialising = false;
 const HELP =
-  '/add opens the ADD; its Roll damage button opens an optional roller. /add 12 cut prefills fixed damage; /add 3d+2 cut prepares a standalone roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /madd is an alias. Rolling never applies injury.';
+  '/add opens the ADD; its Roll damage button opens an optional roller. /add 12 cut prefills fixed damage; /add 3d+2 cut prepares a standalone roll. Optional location="Left Arm", divisor=2, and rolls=shared or rolls=separate. /add roll opens the roller without requiring recipients. /add area opens uniform AoE; /add explosion opens blast review. /madd is an alias. Rolling never applies injury.';
 
 function setting(key) {
   return game.settings.get(ID, key);
@@ -97,6 +99,25 @@ export async function startQueue(recipients, seed, rollSeeds = null) {
       rollSeeds,
     );
     active = session;
+    session.openArea = async (dialog) => {
+      const target = session.rollTarget(dialog);
+      let detached = false;
+      return openArea({
+        tokens: target.recipients.map((r) => r.token),
+        damage: dialog._calculator.basicDamage,
+        damageType: dialog._calculator.damageType,
+        armorDivisor: dialog._calculator.armorDivisor,
+        replacesQueue: true,
+        startEvents: async (events) => {
+          if (!detached) {
+            target.assertCurrent();
+            await dialog.close();
+            detached = true;
+          }
+          return startEventQueue(events);
+        },
+      });
+    };
     session.openFragmentation = async (dialog) => {
       const target = session.rollTarget(dialog);
       return openFragmentation({
@@ -150,12 +171,12 @@ export async function startEventQueue(events) {
     active?.dialog?.bringToTop?.();
     throw new Error('Finish or cancel the current manual-damage queue first.');
   }
-  if (!Array.isArray(events) || !events.length) throw new Error('No fragment hits to review.');
+  if (!Array.isArray(events) || !events.length) throw new Error('No damage events to review.');
   const unique = [];
   const seen = new Set();
   for (const event of events) {
     const recipient = event?.recipient;
-    if (!recipient?.key || !event?.seed) throw new Error('A fragment event is invalid.');
+    if (!recipient?.key || !event?.seed) throw new Error('A damage event is invalid.');
     if (!seen.has(recipient.key)) {
       seen.add(recipient.key);
       unique.push(recipient);
@@ -212,6 +233,8 @@ export async function openFragmentation(options = {}) {
       assertEnabled,
       startEvents: options.startEvents ?? startEventQueue,
       replacesQueue: Boolean(options.replacesQueue),
+      initialDistances: options.distances,
+      origin: options.origin,
     });
     const currentFragmentation = fragmentation;
     const originalClose = fragmentation.close.bind(fragmentation);
@@ -230,9 +253,39 @@ export async function openFragmentation(options = {}) {
   }
 }
 
+export async function openArea(options = {}) {
+  try {
+    assertEnabled();
+    if (areaWorkbench?.rendered) {
+      areaWorkbench.bringToTop?.();
+      throw new Error('Close the existing area helper before starting another attack.');
+    }
+    const recipients = readRecipients(options, true);
+    const Area = createAreaWorkbenchClass();
+    areaWorkbench = new Area(
+      recipients,
+      {
+        assertEnabled,
+        readRecipients: (opts) => readRecipients(opts ?? {}, true),
+        startEvents: options.startEvents ?? startEventQueue,
+        snapshot: options.snapshot,
+        replacesQueue: Boolean(options.replacesQueue),
+        openFragmentation,
+      },
+      options,
+    );
+    areaWorkbench.render(true);
+    return areaWorkbench;
+  } catch (error) {
+    ui.notifications.error('Manual damage: ' + error.message);
+    return false;
+  }
+}
+
 export async function open(options = {}) {
   try {
     assertEnabled();
+    if (options.area) return openArea(options);
     // Empty/numeric invocations open the ADD. Only explicit dice requests
     // open the standalone roller; neither entry point rolls on launch.
     if (options.expression || options.roll) {
@@ -251,6 +304,7 @@ export async function open(options = {}) {
         readRecipients: () => readRecipients({}, true),
         startQueue,
         openFragmentation,
+        openArea,
       });
       workbench.render(true);
       return true;
@@ -300,7 +354,7 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', () => {
   if (game.system.id !== 'gurps') return;
-  game.modules.get(ID).api = Object.freeze({ open, command, openFragmentation });
+  game.modules.get(ID).api = Object.freeze({ open, command, openFragmentation, openArea });
   const registry = globalThis.GURPS?.ChatProcessors;
   if (typeof registry?.registerProcessor === 'function') {
     // Register with GGA itself so chat macros and OtF use the same processor.
