@@ -490,6 +490,59 @@ try {
   console.log(
     'PASS: area UI hides irrelevant controls, shares uniform damage, previews blast falloff, protects pending results and prevents duplicate handoff',
   );
+  // Save through the actual secondary control, then execute the generated script.
+  await page.evaluate(() => {
+    globalThis.savedMacros = [];
+    game.user.can = () => true;
+    globalThis.Macro = {
+      canUserCreate: () => true,
+      create: async (data) => {
+        savedMacros.push(data);
+        return data;
+      },
+    };
+    foundry.applications = {
+      api: { DialogV2: { input: async () => ({ name: 'Blast profile' }) } },
+    };
+    ui.notifications.info = () => {};
+    areaApp.clear();
+    areaApp.refresh();
+  });
+  await page.getByText('Profiles and other actions', { exact: true }).click();
+  await page.locator('[data-action="saveProfile"]').click();
+  await page.waitForFunction(() => savedMacros.length === 1);
+  assert.deepEqual(
+    await page.evaluate(async () => {
+      let received;
+      game.modules = new Map([
+        [
+          'gurps-manual-add',
+          {
+            active: true,
+            api: {
+              openProfile: async (p) => {
+                received = p;
+              },
+            },
+          },
+        ],
+      ]);
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+      await new AsyncFunction(savedMacros[0].command)();
+      return {
+        name: savedMacros[0].name,
+        mode: received.settings.mode,
+        radius: received.settings.radius,
+        rows: received.settings.rows ?? null,
+      };
+    }),
+    { name: 'Blast profile', mode: 'explosion', radius: '8', rows: null },
+  );
+  await page.screenshot({ path: path.join(root, 'test-output/saved-profile.png'), fullPage: true });
+  assert.deepEqual(errors, []);
+  console.log(
+    'PASS: save profile control creates a reusable macro with attack settings and no old target distances',
+  );
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));

@@ -15,5 +15,6 @@
   "scripts/workbench.mjs",
   "styles/manual-add.css",
   "scripts/area.mjs",
-  "scripts/area-workbench.mjs"
+  "scripts/area-workbench.mjs",
+  "scripts/profiles.mjs"
 ]

@@ -1,3 +1,4 @@
+import { saveDamageProfile } from './profiles.mjs';
 import {
   actorSizeModifier,
   fragmentAttackTarget,
@@ -106,6 +107,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         airburst: false,
         visibility: defaultVisibility(),
       };
+      Object.assign(this.draft, services.profileSettings ?? {});
       this.rows = Object.fromEntries(
         this.recipients.map((recipient) => [
           recipient.key,
@@ -197,7 +199,7 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
         <section class="manual-discard-warning" role="alert" hidden><p>These fragment hits have not been sent to ADD. Continuing discards the pending hits without applying injury. The chat record remains, but it will not transfer automatically.</p><button type="button" data-action="keepFragments">Keep hits — return to review</button><button type="button" data-action="discardFragments">Discard hits and close</button></section>
-        <footer class="manual-workbench-actions"><button type="button" data-action="resolveFragments">Resolve fragments</button><button type="button" data-action="reviewFragments">Review hits in ADD</button><button type="button" data-action="close">Close</button></footer>
+        <details><summary>Profiles</summary><button type="button" data-action="saveProfile">Save as macro…</button></details><footer class="manual-workbench-actions"><button type="button" data-action="resolveFragments">Resolve fragments</button><button type="button" data-action="reviewFragments">Review hits in ADD</button><button type="button" data-action="close">Close</button></footer>
         <small>Direct hit guarantees one fragment hit and ignores distance for the fragment attack.  Otherwise fragments attack at skill 15 with only range, posture, and SM modifiers.  Each hit rolls location randomly.  If that location is behind cover, B415 says the fragment hits the cover instead; Skip that ADD hit.</small>
       </form>`;
     }
@@ -271,7 +273,9 @@ export function createFragmentationWorkbenchClass(Base = globalThis.Application)
         const action = event.target.closest('[data-action]')?.dataset.action;
         if (!action) return;
         event.preventDefault();
-        if (action === 'close') void this.close();
+        if (action === 'saveProfile')
+          void saveDamageProfile({ version: 1, kind: 'fragmentation', settings: this.draft });
+        else if (action === 'close') void this.close();
         else if (action === 'resetDistances') this.resetDistances();
         else if (action === 'keepFragments') {
           this.pendingDiscard = null;
