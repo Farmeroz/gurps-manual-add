@@ -1,3 +1,4 @@
+import { normalizeProfile } from './profiles.mjs';
 import { createAreaWorkbenchClass } from './area-workbench.mjs';
 import * as log from './log.mjs';
 import { ID, parseCommand, validateSeed, collectRecipients, locationFor } from './core.mjs';
@@ -222,7 +223,7 @@ export async function openFragmentation(options = {}) {
     assertEnabled();
     if (fragmentation?.rendered) {
       fragmentation.bringToTop?.();
-      if (options.replacesQueue || fragmentation.services.replacesQueue)
+      if (options.profileSettings || options.replacesQueue || fragmentation.services.replacesQueue)
         throw new Error('Close the existing fragmentation helper before opening one for this ADD.');
       return fragmentation;
     }
@@ -233,6 +234,7 @@ export async function openFragmentation(options = {}) {
       assertEnabled,
       startEvents: options.startEvents ?? startEventQueue,
       replacesQueue: Boolean(options.replacesQueue),
+      profileSettings: options.profileSettings,
       initialDistances: options.distances,
       origin: options.origin,
     });
@@ -249,6 +251,61 @@ export async function openFragmentation(options = {}) {
   } catch (error) {
     log.error(error);
     ui.notifications.error(`Manual damage: ${error.message}`);
+    return false;
+  }
+}
+
+export async function openProfile(profile) {
+  try {
+    assertEnabled();
+    const p = normalizeProfile(profile);
+    if (p.kind === 'area') {
+      if (areaWorkbench?.rendered) {
+        if (
+          areaWorkbench.busy ||
+          areaWorkbench.prepared ||
+          areaWorkbench.handedOff ||
+          areaWorkbench.queueActive ||
+          areaWorkbench.events ||
+          areaWorkbench.batch
+        )
+          throw new Error(
+            'Finish the area queue or reset its results before loading a saved profile.',
+          );
+        // A fresh Cones handoff already owns the current template and recipients.
+        // Replace only attack inputs, preserving that reviewed coverage snapshot.
+        Object.assign(areaWorkbench.draft, p.settings);
+        areaWorkbench.error = '';
+        areaWorkbench.refresh();
+        areaWorkbench.bringToTop?.();
+        return areaWorkbench;
+      }
+      return openArea({ profileSettings: p.settings, mode: p.settings.mode });
+    }
+    if (p.kind === 'fragmentation') return openFragmentation({ profileSettings: p.settings });
+    if (p.kind === 'roller') {
+      if (workbench?.rendered)
+        throw new Error('Close the existing damage roller before opening a saved profile.');
+      const Workbench = createWorkbenchClass();
+      workbench = new Workbench(p.settings, {
+        assertEnabled,
+        initialRecipients: readRecipients({}, true),
+        readRecipients: () => readRecipients({}, true),
+        startQueue,
+        openFragmentation,
+        openArea,
+      });
+      workbench.render(true);
+      return workbench;
+    }
+    const recipients = readRecipients({}, true);
+    return startQueue(
+      recipients,
+      p.settings,
+      recipients.map(() => ({ ...p.settings })),
+    );
+  } catch (error) {
+    ui.notifications.error('Damage profile: ' + error.message);
     return false;
   }
 }
@@ -354,7 +411,13 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', () => {
   if (game.system.id !== 'gurps') return;
-  game.modules.get(ID).api = Object.freeze({ open, command, openFragmentation, openArea });
+  game.modules.get(ID).api = Object.freeze({
+    open,
+    command,
+    openFragmentation,
+    openArea,
+    openProfile,
+  });
   const registry = globalThis.GURPS?.ChatProcessors;
   if (typeof registry?.registerProcessor === 'function') {
     // Register with GGA itself so chat macros and OtF use the same processor.

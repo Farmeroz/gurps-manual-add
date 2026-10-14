@@ -4,6 +4,8 @@ export const helpConfig = {
   scope:
     '#context-menu .context-item:has(.manual-add-menu-icon), .manual-add-panel, .manual-add-hud, .gurps-manual-add, [name^="gurps-manual-add."], [data-key^="gurps-manual-add."], [data-tool="gurps-manual-add"], [data-control="gurps-manual-add"]',
   actions: {
+    saveProfile:
+      'Save these attack settings as a named macro. Reopening uses fresh recipients and distances; target DR, traits, overrides and rolled results are not saved.',
     area: 'Open the area helper. Uniform AoE shares damage without falloff; explosions review individual distances. Nothing applies until ADD review.',
     openArea:
       'Prepare one area attack for the current and remaining recipients, replacing their pending ADDs only after confirmation.',

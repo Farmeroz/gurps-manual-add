@@ -1,4 +1,29 @@
-# GURPS Manual Damage 0.4.0
+# GURPS Manual Damage 0.5.0-rc1
+
+## Reusable damage profiles
+
+Configure an attack, expand the secondary options, and choose **Save as macro…** (in ADD: **Attack options → Save attack as macro…**). Name it, then find it in Foundry's **Macros** directory and drag it onto your hotbar. Each save creates a new macro; it does not replace an existing macro with the same name. Creating and running script macros requires the appropriate Foundry permissions.
+
+| Save from                                | Settings remembered                                                                                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ADD → Attack options                     | Current **fixed** basic damage, type, armour divisor, location, damage modifier, custom wounding multiplier if selected, explosion/half-damage/shotgun switches and shotgun RoF multiplier |
+| Roll damage → Profiles                   | Dice expression or fixed damage, type/divisor, optional location, shared/separate rolls, visibility and whether to use the **current** modifier bucket                                     |
+| Area damage → Profiles and other actions | Uniform AoE/explosion/cone mode, fixed damage or dice, type/divisor, blast roll distribution, visibility and explicit radius for fixed-damage explosions                                   |
+| Fragmentation → Profiles                 | Fragment dice, airburst and visibility                                                                                                                                                     |
+
+Select the current recipient tokens and run the macro. Dice and area/fragmentation profiles reopen their helpers for review; they do not roll automatically. Fixed ADD profiles open the normal recipient queue. **No profile applies injury automatically.** A profile saved from ADD stores the displayed basic damage as a fixed value, even if that number originally came from dice. Save from **Roll damage** to retain a dice formula.
+
+Recipients, token IDs, template references, origin, distances, posture, direct-hit choices, rolled results, target DR, vulnerabilities and Injury Tolerance are not saved. Review them for each use. Chinks, armour-layer overrides and contextual exposed-location choices also remain per-target review in Layered Armour. Native ADD explosion distance must be reviewed anew. This is an attack preset, not a copy of a defender's injury calculation.
+
+**With saved Cones shapes:** run the shape macro, place it, then **Send area to Manual Damage**. Run your saved **area damage** macro while that fresh helper is open: it loads attack settings into the current template/recipient snapshot. Prepared results must be reset first, and an active queue must finish. Review the shape's coverage/radius if the loaded profile changes the attack mode or blast radius. Without a template handoff, the macro uses the currently selected tokens.
+
+The GURPS 4e rules and existing review process are unchanged: large-area protection B400, explosions B414 and fragmentation B415. Profiles are versioned and require Manual Damage 0.5.0-rc1 or later. Older hand-written macros using `api.open` remain supported.
+
+**Test build manifest (stable/latest is unchanged):**
+
+```text
+https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.5.0-rc1/module.json
+```
 
 ## Release 0.3.2
 

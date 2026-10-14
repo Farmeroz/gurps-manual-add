@@ -84,8 +84,15 @@ globalThis.canvas = {
   ready: true,
   tokens: { controlled: [token], get: (id) => (id === 't' ? token : undefined) },
 };
-const { open, command, startQueue, startEventQueue, readRecipients, openFragmentation } =
-  await import('../scripts/main.mjs');
+const {
+  open,
+  command,
+  startQueue,
+  startEventQueue,
+  readRecipients,
+  openFragmentation,
+  openProfile,
+} = await import('../scripts/main.mjs');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 test('ADD readiness reports asynchronous opening failures instead of successful hand-off', async () => {
@@ -297,6 +304,85 @@ test('plain ADD opens fragmentation and review replaces its queue without applyi
   await assert.rejects(helper.services.startEvents([]), /changed or finished/);
   fragments.finish(true);
   await helper.close();
+});
+
+test('saved helpers reopen with chosen settings and fresh recipients, without rolling or applying', async () => {
+  const previous = canvas.tokens.controlled;
+  const fresh = {
+    ...token,
+    actor: { ...token.actor, uuid: 'Actor.fresh', id: 'fresh' },
+    document: { ...token.document, id: 'fresh', uuid: 'Scene.s.Token.fresh', name: 'Fresh' },
+  };
+  canvas.tokens.controlled = [fresh];
+  for (const [kind, settings] of [
+    [
+      'roller',
+      {
+        mode: 'roll',
+        expression: '4d+2 cut',
+        distribution: 'separate',
+        visibility: 'blind',
+        includeBucket: true,
+      },
+    ],
+    [
+      'area',
+      {
+        mode: 'explosion',
+        input: 'fixed',
+        damage: 30,
+        damageType: 'cr',
+        radius: 12,
+        visibility: 'gm',
+      },
+    ],
+    ['fragmentation', { expression: '3d cut', airburst: true, visibility: 'self' }],
+  ]) {
+    const before = dialogs.length;
+    const p = { version: 1, kind, settings };
+    const app = await openProfile(p);
+    assert.ok(app);
+    assert.equal(app.recipients[0].actor.id, 'fresh');
+    assert.equal(app.draft.visibility, settings.visibility);
+    assert.equal(app.batch ?? null, null);
+    assert.equal(app.events ?? null, null);
+    assert.equal(dialogs.length, before);
+    if (kind === 'roller') {
+      assert.equal(app.draft.includeBucket, true);
+      assert.equal(app.draft.distribution, 'separate');
+      assert.equal(app.draft.expression, '4d+2 cut');
+      assert.equal(await openProfile(p), false);
+    }
+    if (kind === 'area') {
+      assert.equal(app.template, null);
+      assert.equal(app.draft.radius, '12');
+      assert.equal(Object.values(app.rows)[0].distance, '');
+      const snapshot = { signature: 'fresh-template' };
+      app.template = snapshot;
+      const originalRows = app.rows;
+      assert.equal(await openProfile(p), app);
+      assert.equal(app.template, snapshot);
+      assert.equal(app.rows, originalRows);
+      app.prepared = true;
+      assert.equal(await openProfile(p), false);
+      app.prepared = false;
+    }
+    if (kind === 'fragmentation') assert.equal(app.draft.airburst, true);
+    app.draft.visibility = 'public';
+    assert.equal(settings.visibility === 'public', false);
+    await app.close();
+  }
+  const s = await openProfile({
+    version: 1,
+    kind: 'damage',
+    settings: { damage: 12, damageType: 'cut', isShotgun: true, shotgunRofMultiplier: 4 },
+  });
+  assert.equal(s.dialog.recipient.actor.id, 'fresh');
+  assert.equal(s.dialog._calculator.isShotgun, true);
+  assert.equal(s.dialog._calculator.shotgunRofMultiplier, 4);
+  assert.equal(s.done, false);
+  s.finish(false);
+  canvas.tokens.controlled = previous;
 });
 
 test('area commands and ADD button open the area helper without rolling or replacing anything yet', async () => {

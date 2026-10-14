@@ -1,3 +1,4 @@
+import { calculatorProfile, saveDamageProfile } from './profiles.mjs';
 import * as log from './log.mjs';
 import { ID, canUse, commonValues, locationFor } from './core.mjs';
 
@@ -65,6 +66,11 @@ export function createManualDialogClass(NativeADD) {
         this._calculator.damageType = seed.damageType;
         this._calculator.userEnteredWoundModifier = seed.userEnteredWoundModifier;
       }
+      if (seed.isRangedHalfDamage !== undefined)
+        this._calculator.isRangedHalfDamage = seed.isRangedHalfDamage;
+      if (seed.isShotgun !== undefined) this._calculator.isShotgun = seed.isShotgun;
+      if (seed.shotgunRofMultiplier !== undefined)
+        this._calculator.shotgunRofMultiplier = seed.shotgunRofMultiplier;
       this.sourceTokenName = 'Manual damage';
       this.sourceTokenImg = 'icons/svg/blood.svg';
       this.targetTokenName = recipient.name;
@@ -283,6 +289,20 @@ export function createManualDialogClass(NativeADD) {
         });
         optionFields.append(fragment);
       }
+      const saveProfile = document.createElement('button');
+      saveProfile.type = 'button';
+      saveProfile.dataset.action = 'saveProfile';
+      saveProfile.textContent = 'Save attack as macro…';
+      saveProfile.disabled = this._busy || this._applied;
+      saveProfile.addEventListener('click', async (event) => {
+        event.preventDefault();
+        try {
+          await saveDamageProfile(calculatorProfile(this._calculator));
+        } catch (error) {
+          ui.notifications.error(error.message);
+        }
+      });
+      optionFields.append(saveProfile);
       panel.append(options);
       if (this.session.recipients.length > 1) {
         const note = document.createElement('small');

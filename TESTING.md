@@ -1,5 +1,11 @@
 # Testing
 
+## Saved-profile checks
+
+Automated tests cover validated profile roundtrips, excluded defender/scene data, script serialization, permissions and cancellation, fresh recipient selection, helper reuse after a template handoff, and native GGA half-damage/shotgun restoration with fresh DR. Chromium tests click the secondary Save control and execute its generated macro against the API boundary.
+
+Live Foundry check: save one fixed ADD, dice, area and fragmentation profile; drag each from Macros to the hotbar. Select different tokens and confirm the expected settings reopen with no injury or roll yet. Include a custom wounding multiplier, Large-Area, half damage and shotgun. Recheck DR and explosion distances. Place a saved Cones shape, send it to Manual Damage, then run an area profile and confirm the template/recipients remain current. Prepared results must block profile replacement until explicitly reset. Test script-macro permissions from a connected player. These connected-world checks are not claimed by the automated suite.
+
 Start with the setup commands in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Automated coverage

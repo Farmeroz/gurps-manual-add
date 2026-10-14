@@ -1,4 +1,5 @@
 import { areaEvents } from '../scripts/area.mjs';
+import { calculatorProfile } from '../scripts/profiles.mjs';
 // Run with GGA_SOURCE pointing to an installed GGA 0.18 source directory.
 // Real GGA calculator and ADD resolution code; Foundry documents/UI are mocked.
 import test from 'node:test';
@@ -226,6 +227,32 @@ if (!source) {
     return s;
   }
   const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+  test('saved advanced ADD attack restores native half damage and shotgun while loading fresh DR', () => {
+    reset();
+    const sourceActor = actor('source', 4);
+    const source = session([sourceActor]);
+    source.dialog._calculator.isRangedHalfDamage = true;
+    const p = calculatorProfile(source.dialog._calculator);
+    const target = recipient(actor('fresh', 8));
+    const reopened = new Manual({ index: 0, recipients: [target] }, target, p.settings);
+    assert.equal(reopened._calculator.isRangedHalfDamage, true);
+    assert.equal(reopened._calculator.effectiveDamage, 6);
+    assert.equal(reopened._calculator.effectiveDR, 8);
+    source.dialog._calculator.isShotgun = true;
+    source.dialog._calculator.shotgunRofMultiplier = 6;
+    const shotgun = new Manual(
+      { index: 0, recipients: [target] },
+      target,
+      calculatorProfile(source.dialog._calculator).settings,
+    );
+    assert.equal(shotgun._calculator.isShotgun, true);
+    assert.equal(shotgun._calculator.shotgunRofMultiplier, 6);
+    assert.equal(shotgun._calculator.effectiveDamage, 36);
+    assert.equal(shotgun._calculator.effectiveDR, 24);
+    assert.equal(updates.length, 0);
+    assert.equal(messages.length, 0);
+  });
 
   test('area seeds reach native ADD with one falloff only and direct-hit armour divisors intact', () => {
     reset();

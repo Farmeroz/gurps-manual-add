@@ -1,3 +1,4 @@
+import { saveDamageProfile } from './profiles.mjs';
 import { AREA_MODES, areaEvents, pointDistance } from './area.mjs';
 import {
   DamageBatch,
@@ -44,6 +45,7 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
         radius: '',
         visibility: defaultVisibility(),
       };
+      Object.assign(this.draft, options.profileSettings ?? {});
       this.rows = {};
       this.addRows();
       this.busy = false;
@@ -112,7 +114,7 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
       ${this.services.replacesQueue ? '<label><input type="checkbox" data-ack> Replace the current unapplied ADD queue with this area attack. Previously applied injury is kept.</label>' : ''}
       <div class="manual-workbench-error" role="alert"></div><section data-results aria-live="polite"></section>
       <section data-discard hidden role="alert"><p>Discard these prepared results? They have not been applied automatically; the chat record remains.</p><button type="button" data-action="keep">Keep results</button><button type="button" data-action="discard">Discard and continue</button></section>
-      <footer class="manual-workbench-actions"><button type="button" data-action="prepare">Prepare damage</button><button type="button" data-action="review">Review in ADD</button><button type="button" data-action="close">Close</button></footer><details><summary>Reset or resolve fragmentation</summary><button type="button" data-action="clear">Reset results</button><button type="button" data-action="fragments">Fragmentation…</button><small>Blast and fragmentation are separate. Finish this ADD queue before resolving fragments. Fragment recipients must be checked separately: their radius may be larger than the blast.</small></details></form>`;
+      <footer class="manual-workbench-actions"><button type="button" data-action="prepare">Prepare damage</button><button type="button" data-action="review">Review in ADD</button><button type="button" data-action="close">Close</button></footer><details><summary>Profiles and other actions</summary><button type="button" data-action="saveProfile">Save as macro…</button><button type="button" data-action="clear">Reset results</button><button type="button" data-action="fragments">Fragmentation…</button><small>Blast and fragmentation are separate. Finish this ADD queue before resolving fragments. Fragment recipients must be checked separately: their radius may be larger than the blast.</small></details></form>`;
     }
     async _renderInner() {
       return $(this.markup());
@@ -151,7 +153,9 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
         const action = e.target.closest('[data-action]')?.dataset.action;
         if (!action) return;
         e.preventDefault();
-        if (action === 'prepare') void this.prepare();
+        if (action === 'saveProfile')
+          void saveDamageProfile({ version: 1, kind: 'area', settings: this.draft });
+        else if (action === 'prepare') void this.prepare();
         else if (action === 'review') void this.review();
         else if (action === 'close') void this.close();
         else if (action === 'fragments') void this.fragments();
