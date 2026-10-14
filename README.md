@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.5.0-rc1
+# GURPS Manual Damage 0.5.0
 
 ## Reusable damage profiles
 
@@ -17,17 +17,17 @@ Recipients, token IDs, template references, origin, distances, posture, direct-h
 
 **With saved Cones shapes:** run the shape macro, place it, then **Send area to Manual Damage**. Run your saved **area damage** macro while that fresh helper is open: it loads attack settings into the current template/recipient snapshot. Prepared results must be reset first, and an active queue must finish. Review the shape's coverage/radius if the loaded profile changes the attack mode or blast radius. Without a template handoff, the macro uses the currently selected tokens.
 
-The GURPS 4e rules and existing review process are unchanged: large-area protection B400, explosions B414 and fragmentation B415. Profiles are versioned and require Manual Damage 0.5.0-rc1 or later. Older hand-written macros using `api.open` remain supported.
+The GURPS 4e rules and existing review process are unchanged: large-area protection B400, explosions B414 and fragmentation B415. Profiles are versioned and require Manual Damage 0.5.0 or later. Older hand-written macros using `api.open` remain supported.
 
-**Test build manifest (stable/latest is unchanged):**
+**Stable install/update manifest:**
 
 ```text
-https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.5.0-rc1/module.json
+https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json
 ```
 
-## Release 0.3.2
+## About Manual Damage
 
-Fix the attack-options expander with an explicit mouse- and keyboard-accessible button, preserving its state after area changes. Declare verified Foundry VTT 14 compatibility.
+Version 0.5.0 adds reusable attack profiles to the existing damage, area and fragmentation workflow.
 
 Enter fixed damage or roll damage dice, then review and apply the result with GGA’s full Apply Damage Dialog (ADD). Each recipient keeps their own DR, hit locations, and injury options. A separate GURPS 4e fragmentation helper resolves B415 fragment hits without cluttering ordinary damage entry. GURPS Layered Armour is supported when installed and enabled.
 
@@ -54,7 +54,7 @@ The original ADD queue is replaced only after acknowledging that its unapplied e
 
 ### Area-attack installation
 
-Use Manual Damage **0.4.0** with Cones **0.2.0** for template handoff. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
+Use Manual Damage **0.5.0** with Cones **0.3.0** for template handoff and saved-profile workflows. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
 
 Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json
 
@@ -85,7 +85,7 @@ https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.jso
 
 For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
 
-**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.4.0** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.1** as well. Future stable updates use the stable manifest.
+**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.5.0** in Manage Modules and reload every connected client. If you use Layered Armour, keep it on its current stable release. Future stable updates use the stable manifest.
 
 ## Open Manual Damage
 
