@@ -31,7 +31,7 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
         ...services,
       };
       this.recipients = recipients.slice();
-      this.template = options.template ?? null;
+      this.areaTemplateSnapshot = options.template ?? null;
       this.origin = options.origin ?? null;
       this.originKey = '';
       this.draft = {
@@ -81,14 +81,17 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
       }
     }
     assertSnapshot() {
-      if (this.template && this.services.snapshot?.().signature !== this.template.signature)
+      if (
+        this.areaTemplateSnapshot &&
+        this.services.snapshot?.().signature !== this.areaTemplateSnapshot.signature
+      )
         throw new Error(
           'The template or scene tokens changed. Reset results, then Refresh template before preparing damage.',
         );
     }
     markup() {
       return `<form autocomplete="off"><p><strong>1. Review recipients. 2. Prepare damage. 3. Review in ADD.</strong> Nothing applies injury until you confirm it in each ADD.</p>
-      <details><summary>Coverage and rules</summary><p>${this.template ? `Template: ${esc(this.template.name)}. Uses Foundry Region membership (covered token spaces), not walls or cover. Refresh after moving the template or tokens.` : 'Selected recipients; no template is required. Add selected tokens or exclude rows below.'} Review cover, dodge-and-drop and partial overlap yourself.</p></details>
+      <details><summary>Coverage and rules</summary><p>${this.areaTemplateSnapshot ? `Template: ${esc(this.areaTemplateSnapshot.name)}. Uses Foundry Region membership (covered token spaces), not walls or cover. Refresh after moving the template or tokens.` : 'Selected recipients; no template is required. Add selected tokens or exclude rows below.'} Review cover, dodge-and-drop and partial overlap yourself.</p></details>
       <div class="manual-roll-grid"><label>Attack mode<select data-field="mode">${Object.entries(
         AREA_MODES,
       )
@@ -109,7 +112,7 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
       <section data-blast><details><summary>Blast rules and exceptions</summary><p>Collateral blast: divide by 3 × distance in yards (minimum 1 yard), round down. Only a direct hit receives full damage and the attack’s armour divisor. Zero distance alone is not a direct hit. GURPS 4e B414.</p></details>
       <label>Blast radius (yards)<input type="number" min="0" step="any" data-field="radius"></label>
       <label>Distance origin<select data-origin><option value="">${this.origin ? 'Template centre' : 'Manual distances'}</option>${this.recipients.map((r) => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('')}</select></label><small>Centre-to-centre estimates include elevation. Edit any distance. Dice set radius automatically; fixed damage requires a radius.</small></section>
-      <details><summary>Recipients and distances</summary><div class="manual-workbench-actions"><button type="button" data-action="add">Add selected tokens</button>${this.template ? '<button type="button" data-action="refresh">Refresh template</button>' : ''}<button type="button" data-action="reset">Reset distances</button></div></details>
+      <details><summary>Recipients and distances</summary><div class="manual-workbench-actions"><button type="button" data-action="add">Add selected tokens</button>${this.areaTemplateSnapshot ? '<button type="button" data-action="refresh">Refresh template</button>' : ''}<button type="button" data-action="reset">Reset distances</button></div></details>
       <table class="manual-fragment-table"><thead><tr><th>Include</th><th>Recipient</th><th data-blast>Distance (yd)</th><th data-blast>Direct hit</th></tr></thead><tbody>${this.recipients.map((r) => `<tr data-recipient="${esc(r.key)}"><td><input type="checkbox" data-help="Include this recipient in the damage review. Exclude targets protected by cover or outside the effect." data-row="include" aria-label="Include ${esc(r.name)}"></td><td>${esc(r.name)}</td><td data-blast><input type="number" min="0" step="any" data-help="Distance from blast centre in yards; editable. Collateral falloff uses at least one yard." data-row="distance" aria-label="${esc(r.name)} distance"></td><td data-blast><input type="checkbox" data-help="The attack actually struck this recipient. Full basic damage and its armour divisor apply; zero distance alone is not enough." data-row="directHit" aria-label="${esc(r.name)} direct hit"></td></tr>`).join('')}</tbody></table>
       ${this.services.replacesQueue ? '<label><input type="checkbox" data-ack> Replace the current unapplied ADD queue with this area attack. Previously applied injury is kept.</label>' : ''}
       <div class="manual-workbench-error" role="alert"></div><section data-results aria-live="polite"></section>
@@ -267,7 +270,7 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
         }
         if (action === 'refresh') {
           const snap = this.services.snapshot();
-          this.template = snap;
+          this.areaTemplateSnapshot = snap;
           this.origin = snap.origin;
           this.originKey = '';
           this.recipients = this.services.readRecipients({ tokens: snap.tokens });

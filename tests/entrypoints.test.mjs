@@ -24,6 +24,9 @@ globalThis.ui = {
 };
 globalThis.foundry = { utils: { randomID: () => 'id', mergeObject: (a, b) => ({ ...a, ...b }) } };
 globalThis.Application = class {
+  get template() {
+    return 'foundry-application-template';
+  }
   constructor() {
     this.options = {};
   }
@@ -354,14 +357,14 @@ test('saved helpers reopen with chosen settings and fresh recipients, without ro
       assert.equal(await openProfile(p), false);
     }
     if (kind === 'area') {
-      assert.equal(app.template, null);
+      assert.equal(app.areaTemplateSnapshot, null);
       assert.equal(app.draft.radius, '12');
       assert.equal(Object.values(app.rows)[0].distance, '');
       const snapshot = { signature: 'fresh-template' };
-      app.template = snapshot;
+      app.areaTemplateSnapshot = snapshot;
       const originalRows = app.rows;
       assert.equal(await openProfile(p), app);
-      assert.equal(app.template, snapshot);
+      assert.equal(app.areaTemplateSnapshot, snapshot);
       assert.equal(app.rows, originalRows);
       app.prepared = true;
       assert.equal(await openProfile(p), false);
