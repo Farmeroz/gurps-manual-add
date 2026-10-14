@@ -419,6 +419,77 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log('PASS: close warning preserves pending hits; confirmed reset allows a new centre');
+  await page.evaluate(async () => {
+    const { createAreaWorkbenchClass } = await import('/scripts/area-workbench.mjs');
+    const Area = createAreaWorkbenchClass(
+      class {
+        static get defaultOptions() {
+          return {};
+        }
+        activateListeners() {}
+        render() {
+          return this;
+        }
+        async close() {
+          this.closed = true;
+        }
+      },
+    );
+    const recipients = ['Artemis', 'Gabriella', 'Luke Marcus Price'].map((key) => ({
+      key,
+      name: key,
+      token: {},
+      document: {},
+      actor: {},
+    }));
+    globalThis.areaQueues = [];
+    globalThis.areaApp = new Area(recipients, {
+      createMessage: async () => ({ id: 'area-chat' }),
+      startEvents: async (events) => {
+        areaQueues.push(events);
+        return { completion: new Promise(() => {}) };
+      },
+    });
+    const main = document.querySelector('main');
+    main.className = 'gurps-manual-add manual-area-workbench';
+    main.style.width = '760px';
+    main.innerHTML = '<section class="window-content">' + areaApp.markup() + '</section>';
+    areaApp.element = main;
+    areaApp.activateListeners(main);
+  });
+  await page.locator('[data-field="damage"]').fill('24');
+  assert.equal(await page.locator('[data-row="distance"]').first().isVisible(), false);
+  assert.equal(await page.locator('footer [data-action]').count(), 3);
+  await page.screenshot({ path: path.join(root, 'test-output/area-uniform.png'), fullPage: true });
+  await page.locator('[data-action="prepare"]').click();
+  assert.equal(await page.evaluate(() => areaApp.events.every((e) => e.effective === 24)), true);
+  await page.locator('[data-action="close"]').click();
+  assert.equal(await page.locator('[data-discard]').isVisible(), true);
+  await page.locator('[data-action="keep"]').click();
+  await page.locator('[data-action="review"]').click();
+  assert.equal(await page.evaluate(() => areaQueues.length), 1);
+  assert.equal(await page.locator('[data-action="review"]').isDisabled(), true);
+  await page.evaluate(() => {
+    areaApp.queueActive = false;
+    areaApp.clear();
+    areaApp.draft.mode = 'explosion';
+    areaApp.draft.radius = '8';
+    areaApp.rows.Artemis.distance = '1';
+    areaApp.rows.Gabriella.distance = '2';
+    areaApp.rows['Luke Marcus Price'].distance = '3';
+    areaApp.refresh();
+  });
+  assert.equal(await page.locator('[data-row="distance"]').first().isVisible(), true);
+  await page.locator('[data-action="prepare"]').click();
+  assert.deepEqual(await page.evaluate(() => areaApp.events.map((e) => e.effective)), [8, 4, 2]);
+  await page.screenshot({
+    path: path.join(root, 'test-output/area-explosion.png'),
+    fullPage: true,
+  });
+  assert.deepEqual(errors, []);
+  console.log(
+    'PASS: area UI hides irrelevant controls, shares uniform damage, previews blast falloff, protects pending results and prevents duplicate handoff',
+  );
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));

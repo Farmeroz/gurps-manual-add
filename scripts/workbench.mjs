@@ -132,7 +132,7 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         <section class="manual-selection"><strong>Recipients</strong><p class="manual-recipient-names"></p><button type="button" data-action="refreshRecipients">Use currently selected tokens</button></section>
         <div class="manual-workbench-error" role="alert"></div>
         <section class="manual-roll-results" aria-live="polite"></section>
-        <footer class="manual-workbench-actions"><button type="button" data-action="roll">Roll damage</button><button type="button" data-action="review">Review and apply</button><button type="button" data-action="fragmentation">Fragmentation…</button><button type="button" data-action="close">Close</button></footer>
+        <details data-area-tools><summary>Area attacks</summary><button type="button" data-action="area">Area attack…</button><button type="button" data-action="fragmentation">Fragmentation…</button></details><footer class="manual-workbench-actions"><button type="button" data-action="roll">Roll damage</button><button type="button" data-action="review">Review and apply</button><button type="button" data-action="close">Close</button></footer>
         <small>Rolling does not apply damage. Each ADD uses its recipient’s DR, armour layers, and injury options. Injury-result visibility follows the ADD’s own controls.</small>
       </form>`;
     }
@@ -165,6 +165,8 @@ export function createWorkbenchClass(Base = globalThis.Application) {
         if (action === 'close') void this.close();
         else if (action === 'roll') void this.rollDamage();
         else if (action === 'review') void this.review();
+        else if (action === 'area')
+          void this.services.openArea?.({ tokens: this.recipients.map((r) => r.token) });
         else if (action === 'fragmentation') void this.openFragmentation();
         else if (action === 'refreshRecipients') this.refreshRecipients();
       });
@@ -227,6 +229,10 @@ export function createWorkbenchClass(Base = globalThis.Application) {
       root.querySelector('[data-action="refreshRecipients"]').disabled = locked || this.handedOff;
       root.querySelector('[data-action="refreshRecipients"]').hidden = this.attached;
       const fragmentation = root.querySelector('[data-action="fragmentation"]');
+      const area = root.querySelector('[data-action="area"]');
+      root.querySelector('[data-area-tools]').hidden = this.attached;
+      area.hidden = this.attached;
+      area.disabled = locked || this.handedOff;
       fragmentation.hidden = this.attached;
       fragmentation.disabled = locked || this.handedOff || !this.recipients.length;
       root.querySelector('[data-action="close"]').disabled = this.busy;

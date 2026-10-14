@@ -27,6 +27,8 @@ export function parseCommand(line) {
   if (quote) throw new Error('Close the quotation marks around the location.');
   if (started) words.push(word);
   if (words.length === 1 && /^(?:help|--help|\?)$/i.test(words[0])) return { help: true };
+  if (words.length === 1 && ['area', 'aoe', 'explosion'].includes(words[0].toLowerCase()))
+    return { area: true, mode: words[0].toLowerCase() === 'explosion' ? 'explosion' : 'uniform' };
   if (words.length === 1 && words[0].toLowerCase() === 'roll') return { roll: true };
   const result = {};
   if (words.length && !words[0].includes('=')) result.damage = words.shift();

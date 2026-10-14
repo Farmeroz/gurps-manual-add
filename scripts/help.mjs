@@ -4,6 +4,23 @@ export const helpConfig = {
   scope:
     '#context-menu .context-item:has(.manual-add-menu-icon), .manual-add-panel, .manual-add-hud, .gurps-manual-add, [name^="gurps-manual-add."], [data-key^="gurps-manual-add."], [data-tool="gurps-manual-add"], [data-control="gurps-manual-add"]',
   actions: {
+    area: 'Open the area helper. Uniform AoE shares damage without falloff; explosions review individual distances. Nothing applies until ADD review.',
+    openArea:
+      'Prepare one area attack for the current and remaining recipients, replacing their pending ADDs only after confirmation.',
+    prepare:
+      'Record fixed damage or roll dice. This does not apply injury. Review the results in ADD next.',
+    clear:
+      'Discard prepared area results and unlock inputs. Existing chat records and applied injury remain.',
+    add: 'Add currently selected permitted tokens without removing existing recipients.',
+    reset:
+      'Clear distance overrides and direct hits, then remeasure from the template centre if available.',
+    refresh:
+      'Reload the template recipients and distances after moving the template or tokens. This replaces manual recipient changes.',
+    fragments:
+      'Open fragmentation separately after finishing the blast queue. Review its recipients: fragmentation may extend beyond the blast template.',
+    keep: 'Keep the prepared results for ADD review.',
+    discard:
+      'Discard these pending results and continue the requested action. Does not undo applied injury.',
     openRoller:
       'Open an optional damage roller for this recipient and the remaining queue. Return its result to this same ADD without applying injury or changing location, DR overrides, or temporary armour settings.',
     roll: 'Roll the displayed damage and record it in chat without applying injury. Retry keeps dice already rolled; Roll again starts a new damage event.',
@@ -21,6 +38,12 @@ export const helpConfig = {
       'Send the resolved fragment hits to the normal ADD one at a time. Each hit keeps its own random location and uses normal armour and injury rules.',
   },
   fields: {
+    mode: 'Uniform AoE and Cone use no falloff. Explosion uses B414 collateral falloff, radius and direct-hit handling.',
+    input: 'Choose fixed basic damage or a dice expression.',
+    damage:
+      'Basic damage before DR. Uniform AoE gives this same amount to every included recipient.',
+    radius:
+      'Collateral blast radius in yards. Dice use twice the damage dice times the multiplier. Fixed damage requires an explicit radius.',
     mode: 'Choose a fixed basic-damage number or roll damage dice. Switching entry mode discards the pending result in this window; chat records remain.',
     damage: 'A fixed basic-damage total before DR and wounding. No dice are rolled.',
     expression:

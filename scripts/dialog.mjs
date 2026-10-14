@@ -51,6 +51,16 @@ export function createManualDialogClass(NativeADD) {
       this._calculator.hitLocation =
         manual && seed.hitlocation === 'Large-Area' ? 'Large-Area' : location;
       this._calculator.isExplosion = Boolean(seed.isExplosion);
+      if (seed.hexesFromExplosion !== undefined)
+        this._calculator.hexesFromExplosion = seed.hexesFromExplosion;
+      if (seed.areaAttack === 'explosion' && seed.isExplosion) {
+        Object.defineProperty(this._calculator, 'explosionDivisor', {
+          configurable: true,
+          get() {
+            return this.isExplosion ? 3 * Math.max(1, Number(this.hexesFromExplosion) || 1) : 1;
+          },
+        });
+      }
       if (seed.damageType === 'User Entered') {
         this._calculator.damageType = seed.damageType;
         this._calculator.userEnteredWoundModifier = seed.userEnteredWoundModifier;
@@ -239,6 +249,23 @@ export function createManualDialogClass(NativeADD) {
             : 'Large-Area';
         this.render(false);
       });
+      if (this.session.openArea) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.action = 'openArea';
+        button.textContent = 'Area attack…';
+        button.disabled = this._busy || this._applied;
+        button.addEventListener('click', async (event) => {
+          event.preventDefault();
+          try {
+            this.assertPermission();
+            await this.session.openArea(this);
+          } catch (error) {
+            ui.notifications.error(error.message);
+          }
+        });
+        optionFields.append(button);
+      }
       if (this.session.openFragmentation) {
         const fragment = document.createElement('button');
         fragment.type = 'button';
