@@ -184,6 +184,21 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
       root.querySelector('[data-fixed]').hidden = this.draft.input !== 'fixed';
       root.querySelector('[data-dice]').hidden = this.draft.input !== 'dice';
       root.querySelector('[data-field="radius"]').disabled = locked || this.draft.input === 'dice';
+      if (this.draft.mode === 'explosion' && this.draft.input === 'dice') {
+        try {
+          const spec = parseExpression(
+            this.draft.expression,
+            {},
+            GURPS.DamageTables.woundModifiers,
+          );
+          root.querySelector('[data-field="radius"]').value = String(
+            2 * spec.dice * spec.multiplier,
+          );
+        } catch {
+          root.querySelector('[data-field="radius"]').value = '';
+        }
+      }
+      root.querySelector('[data-action="reset"]').hidden = this.draft.mode !== 'explosion';
       root.querySelector('[data-origin]').value = this.originKey;
       root.querySelector('[data-origin]').disabled = locked;
       for (const tr of root.querySelectorAll('[data-recipient]'))
