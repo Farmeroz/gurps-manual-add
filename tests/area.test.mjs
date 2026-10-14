@@ -21,6 +21,10 @@ const rows = {
 const seed = { damage: 30, damageType: 'cr', armorDivisor: 10 };
 const Area = createAreaWorkbenchClass(
   class {
+    // Foundry Application owns a getter-only HTML template property.
+    get template() {
+      return 'foundry-application-template';
+    }
     static get defaultOptions() {
       return {};
     }
@@ -202,11 +206,30 @@ test('changed template prevents prepare or handoff until refreshed; explicit ref
   app.services.snapshot = () => ({ signature: 'new', tokens: [], origin: null });
   assert.equal(await app.prepare(), false);
   assert.match(app.error, /changed/);
-  app.template.signature = 'new';
+  app.areaTemplateSnapshot.signature = 'new';
   app.draft.damage = '12';
   assert.equal(await app.prepare(), true);
   app.services.snapshot = () => ({ signature: 'newer' });
   assert.equal(await app.review(), false);
+});
+
+test('area snapshots leave Foundry template accessor intact on construction and refresh', async () => {
+  const plain = make().app;
+  assert.equal(plain.template, 'foundry-application-template');
+  assert.equal(plain.areaTemplateSnapshot, null);
+  assert.equal(plain.recipients.length, 2);
+  const initial = { name: 'First circle', signature: 'old' };
+  const { app } = make({ template: initial });
+  assert.equal(app.areaTemplateSnapshot, initial);
+  assert.match(app.markup(), /First circle/);
+  const refreshed = { name: 'Moved circle', signature: 'new', origin: null, tokens: [] };
+  app.services.snapshot = () => refreshed;
+  app.services.readRecipients = () => [recipients[1]];
+  await app.edit('refresh');
+  assert.equal(app.template, 'foundry-application-template');
+  assert.equal(app.areaTemplateSnapshot, refreshed);
+  assert.deepEqual(app.recipients, [recipients[1]]);
+  assert.match(app.markup(), /Moved circle/);
 });
 test('blind player results never display damage or hand off; fixed explosion requires radius and distances', async () => {
   const { app } = make({ mode: 'explosion' });
