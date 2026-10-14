@@ -1,4 +1,4 @@
-# GURPS Manual Damage 0.4.0-rc1
+# GURPS Manual Damage 0.4.0
 
 ## Release 0.3.2
 
@@ -27,11 +27,11 @@ Inputs lock once results exist. **Reset results** explicitly discards them befor
 
 The original ADD queue is replaced only after acknowledging that its unapplied entries will be replaced. Earlier applied injury is retained. Finish the area queue before using **Reset or resolve fragmentation → Fragmentation…**. This carries the listed recipients and distances into the existing fragmentation helper; review its recipient list separately because fragment range can exceed the blast. Opening a helper never applies blast or fragment injury automatically.
 
-### Test installation
+### Area-attack installation
 
-Use Manual Damage **0.4.0-rc1** with Cones **0.2.0-rc1** for template handoff. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
+Use Manual Damage **0.4.0** with Cones **0.2.0** for template handoff. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
 
-Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.4.0-rc1/module.json
+Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json
 
 ## Quick start for players and GMs
 
@@ -42,7 +42,7 @@ Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/download/v0.4.0-
 
 **Apply directly (ignore DR)** bypasses armour. Use calculated injury for ordinary damage resolution.
 
-### What is new in 0.3.1?
+### Features introduced in 0.3.1
 
 NPCs without hit locations now open temporary manual review: enter DR (including 0) for calculated injury, or deliberately apply direct damage. Their sheets remain unchanged. Failed ADD opening preserves rolled results for retry.
 
@@ -60,7 +60,7 @@ https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.jso
 
 For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
 
-**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.3.1** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.1** as well. Future stable updates use the stable manifest.
+**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.4.0** in Manage Modules and reload every connected client. If you use Layered Armour, update it to **0.3.1** as well. Future stable updates use the stable manifest.
 
 ## Open Manual Damage
 
