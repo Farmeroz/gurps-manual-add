@@ -44,7 +44,7 @@ export function pointDistance(origin, recipient) {
   if (!origin) return null;
   return distanceInYards(
     {
-      token: { center: origin },
+      token: { center: { x: origin.x, y: origin.y } },
       document: { parent: { id: origin.sceneId }, elevation: origin.elevation },
     },
     recipient,

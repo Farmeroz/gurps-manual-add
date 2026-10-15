@@ -1,5 +1,6 @@
 import { saveDamageProfile } from './profiles.mjs';
 import { AREA_MODES, areaEvents, pointDistance } from './area.mjs';
+import { distanceInYards } from './fragmentation-workbench.mjs';
 import {
   DamageBatch,
   defaultVisibility,
@@ -66,19 +67,10 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
     }
     estimate() {
       const chosen = this.recipients.find((r) => r.key === this.originKey);
-      const centre = chosen?.token?.center;
-      const origin = chosen
-        ? {
-            x: centre?.x,
-            y: centre?.y,
-            sceneId: chosen.document.parent?.id,
-            elevation: chosen.document.elevation ?? 0,
-          }
-        : this.origin;
       for (const r of this.recipients) {
         const row = this.rows[r.key];
         if (row.edited) continue;
-        const distance = pointDistance(origin, r);
+        const distance = chosen ? distanceInYards(chosen, r) : pointDistance(this.origin, r);
         row.distance = distance === null ? '' : String(distance);
       }
     }

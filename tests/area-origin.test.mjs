@@ -21,7 +21,16 @@ const scene = { id: 's', grid: { units: 'yards' } };
 globalThis.canvas = {
   ready: true,
   scene,
-  grid: { measurePath: ([a, b]) => ({ euclidean: Math.hypot(b.x - a.x, b.y - a.y) }) },
+  grid: {
+    measurePath: ([a, b]) => {
+      // The shared helper measures a 2D path, then adds elevation itself.
+      // Passing elevation on only one waypoint changes the grid API contract.
+      assert.equal('elevation' in a, false);
+      assert.equal('elevation' in b, false);
+      assert.equal('sceneId' in a, false);
+      return { euclidean: Math.hypot(b.x - a.x, b.y - a.y) };
+    },
+  },
 };
 const Area = createAreaWorkbenchClass(class {});
 const recipient = (key, x, y, elevation = 0) => ({

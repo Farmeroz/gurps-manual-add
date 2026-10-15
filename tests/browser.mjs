@@ -543,6 +543,45 @@ try {
   console.log(
     'PASS: save profile control creates a reusable macro with attack settings and no old target distances',
   );
+  // Foundry 14 returns NaN when 3D and 2D waypoints are mixed.
+  await page.evaluate(() => {
+    canvas.ready = true;
+    canvas.scene = { id: 'area-scene', grid: { units: 'yd' } };
+    canvas.grid.measurePath = ([a, b]) => ({
+      euclidean: 'elevation' in a || 'elevation' in b ? NaN : Math.hypot(b.x - a.x, b.y - a.y),
+    });
+    areaApp.recipients.forEach((r, i) => {
+      r.token.center = { x: i * 3, y: i * 4 };
+      r.document = { parent: canvas.scene, elevation: 0 };
+    });
+    areaApp.origin = null;
+    areaApp.originKey = '';
+    areaApp.rows = {};
+    areaApp.addRows();
+    areaApp.render = function () {
+      this.refresh();
+      return this;
+    };
+    areaApp.refresh();
+  });
+  const distances = () =>
+    page.locator('[data-row="distance"]').evaluateAll((ns) => ns.map((n) => n.value));
+  await page.getByLabel('Artemis distance', { exact: true }).fill('0');
+  assert.deepEqual(await distances(), ['0', '5', '10']);
+  await page.getByLabel('Gabriella distance', { exact: true }).fill('7');
+  await page.locator('[data-origin]').selectOption('Luke Marcus Price');
+  assert.deepEqual(await distances(), ['0', '7', '0']);
+  await page.getByText('Recipients and distances', { exact: true }).click();
+  await page.locator('[data-action="reset"]').click();
+  await page.getByLabel('Gabriella direct hit', { exact: true }).check();
+  assert.deepEqual(await distances(), ['5', '0', '5']);
+  await page.locator('[data-action="reset"]').click();
+  await page.locator('[data-origin]').selectOption('Luke Marcus Price');
+  assert.deepEqual(await distances(), ['10', '5', '0']);
+  assert.deepEqual(errors, []);
+  console.log(
+    'PASS: explosion zero, direct hit, origin dropdown and reset calculate distances; manual overrides survive',
+  );
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));
