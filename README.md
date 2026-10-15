@@ -1,12 +1,12 @@
-# GURPS Manual Damage 0.5.2
+# GURPS Manual Damage 0.5.3
 
-## 0.5.2: selected-origin distance estimates
+## 0.5.3: selected-origin distance estimates
 
-Area Attack now reads the selected token centre's x/y coordinates explicitly. Copying the point object could discard accessor-based coordinates, leaving distances blank even when fragmentation measured the same tokens successfully. This fixes that reproducible coordinate-handling case; it does not establish the cause of every unavailable measurement.
+Fixes the blank explosion distances confirmed in Foundry 14.367. Area Attack passed an elevation-bearing origin alongside a plain 2D destination, producing an invalid distance. It now uses fragmentation's working token measurement routine; template origins also pass clean 2D coordinates, with elevation accounted for separately. The earlier 0.5.2 change did not fix this live failure.
 
 For an explosion, select **Distance origin**, or enter the first zero distance/tick the first **Direct hit** to nominate a recipient as origin. Other unedited distances calculate automatically when scene measurements are available. **Recipients and distances → Reset distances** clears the origin and manual overrides before choosing a new centre. Direct hit is a separate attack choice; zero distance alone does not mark it. Manual distance overrides remain intact during estimates.
 
-Update to **0.5.2** and reload connected clients. No Cones update or macro recreation is required. GURPS 4e damage rules are unchanged.
+Update to **0.5.3** and reload connected clients. No Cones update or macro recreation is required. GURPS 4e damage rules are unchanged.
 
 ## 0.5.1: Area Attack opening fix
 
@@ -66,7 +66,7 @@ The original ADD queue is replaced only after acknowledging that its unapplied e
 
 ### Area-attack installation
 
-Use Manual Damage **0.5.2** with Cones **0.3.0** for template handoff and saved-profile workflows. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
+Use Manual Damage **0.5.3** with Cones **0.3.0** for template handoff and saved-profile workflows. Layered Armour remains optional and needs no new release for this feature. The area helper works with selected tokens without Cones. Missing hit-location NPCs retain explicit manual DR review.
 
 Manifest: https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.json
 
@@ -97,7 +97,7 @@ https://github.com/Farmeroz/gurps-manual-add/releases/latest/download/module.jso
 
 For manual installation, extract the ZIP’s `gurps-manual-add` folder into `Data/modules`, replacing the existing folder. Restart Foundry, enable **GURPS Manual Damage** in your world, and reload connected browsers.
 
-**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.5.2** in Manage Modules and reload every connected client. If you use Layered Armour, keep it on its current stable release. Future stable updates use the stable manifest.
+**Moving from an rc test build:** install using the stable manifest above, because rc manifests are pinned to their specific test release. Confirm **0.5.3** in Manage Modules and reload every connected client. If you use Layered Armour, keep it on its current stable release. Future stable updates use the stable manifest.
 
 ## Open Manual Damage
 
