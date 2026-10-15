@@ -66,9 +66,11 @@ export function createAreaWorkbenchClass(Base = globalThis.Application) {
     }
     estimate() {
       const chosen = this.recipients.find((r) => r.key === this.originKey);
+      const centre = chosen?.token?.center;
       const origin = chosen
         ? {
-            ...chosen.token.center,
+            x: centre?.x,
+            y: centre?.y,
             sceneId: chosen.document.parent?.id,
             elevation: chosen.document.elevation ?? 0,
           }
