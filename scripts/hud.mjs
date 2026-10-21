@@ -88,9 +88,19 @@ export function createHudIntegration(launch) {
 export function registerHudIntegration(launch) {
   const integration = createHudIntegration(launch);
   const hudClass = globalThis.CONFIG?.Token?.hudClass;
-  const renderHooks = new Set(['renderTokenHUD', 'renderBasePlaceableHUD']);
+  const renderHooks = new Set(['renderTokenHUD']);
   if (hudClass?.name) renderHooks.add(`render${hudClass.name}`);
   for (const hook of renderHooks) Hooks.on(hook, integration.render);
+  // Other token-bound overlays (including Image Hover) also extend this base.
+  // A bound actor alone does not identify the actual token controls.
+  Hooks.on('renderBasePlaceableHUD', (hud, html) => {
+    const tokenHudClass = globalThis.CONFIG?.Token?.hudClass;
+    if (
+      hud === globalThis.canvas?.hud?.token ||
+      (typeof tokenHudClass === 'function' && hud instanceof tokenHudClass)
+    )
+      integration.render(hud, html);
+  });
   // Foundry v14 documents this token-specific hook name. The generic
   // getPlaceableContextOptions name is a documentation placeholder.
   Hooks.on('getTokenPlaceableContextOptions', integration.context);
