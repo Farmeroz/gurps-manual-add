@@ -38,8 +38,8 @@ test('registers native token context hook and custom HUD render hook without dup
     hooks.map((x) => x[0]),
     [
       'renderTokenHUD',
-      'renderBasePlaceableHUD',
       'renderCustomTokenHUD',
+      'renderBasePlaceableHUD',
       'getTokenPlaceableContextOptions',
     ],
   );
@@ -154,4 +154,39 @@ domTest('disabling the HUD setting removes the rendered control and hides menu e
   const items = [];
   integration.context({ object: a }, items);
   assert.equal(items.length, 0);
+});
+
+domTest('generic HUD hook excludes token-bound portraits but preserves real token controls', () => {
+  const { a, calls } = setup();
+  class BasePlaceableHUD {
+    constructor() {
+      this.object = a;
+    }
+  }
+  class TokenHUD extends BasePlaceableHUD {}
+  class CustomTokenHUD extends TokenHUD {}
+  class ImageHoverHUD extends BasePlaceableHUD {}
+  const hooks = new Map();
+  globalThis.Hooks = { on: (name, fn) => hooks.set(name, fn) };
+  globalThis.CONFIG = { Token: { hudClass: CustomTokenHUD } };
+  const tokenHud = new CustomTokenHUD();
+  canvas.hud = { token: tokenHud };
+  registerHudIntegration((args) => calls.push(args));
+  const portrait = dom(
+    '<div class="image-hover-hud"><img src="portrait.webp"></div>',
+  ).querySelector('div');
+  const before = portrait.outerHTML;
+  hooks.get('renderBasePlaceableHUD')(new ImageHoverHUD(), portrait);
+  assert.equal(portrait.outerHTML, before);
+  const root = dom('<form id="token-hud"></form>').querySelector('form');
+  for (const name of ['renderBasePlaceableHUD', 'renderTokenHUD', 'renderCustomTokenHUD'])
+    hooks.get(name)(tokenHud, root);
+  assert.equal(root.querySelectorAll('.manual-add-hud').length, 1);
+  root.querySelector('.manual-add-hud').click();
+  assert.equal(calls[0].tokens[0], a);
+  // The live canvas HUD identity also supports installations without hudClass.
+  delete CONFIG.Token.hudClass;
+  const otherRoot = dom('<form></form>').querySelector('form');
+  hooks.get('renderBasePlaceableHUD')(tokenHud, otherRoot);
+  assert.ok(otherRoot.querySelector('.manual-add-hud'));
 });

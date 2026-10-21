@@ -1,4 +1,8 @@
-# GURPS Manual Damage 0.5.3
+# GURPS Manual Damage 0.5.4
+
+## 0.5.4: Image Hover compatibility
+
+Fixes the Manual Damage calculator appearing beside Image Hover portraits. The generic HUD render fallback now checks that it is rendering the actual token HUD; other token-bound overlays are left alone. The normal token button and context-menu entry remain available. Update Manual Damage and reload connected clients; no Image Hover update is required. GURPS 4e damage calculations are unchanged.
 
 ## 0.5.3: selected-origin distance estimates
 
